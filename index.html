@@ -15,9 +15,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
 <style>
-/* Layout: full-height topo map with a side panel (desktop) or a panel below the map (phone). Trail-blaze red is the one accent. */
+/* Layout: full-height topo map with a side panel (desktop) or a resizable panel below the map (phone). Serif headings like a logbook, red summit mark as the one accent. */
 :root {
   --bg: #F7F8F6;
   --surface: #FFFFFF;
@@ -30,8 +30,8 @@
   --ok: #2E7D4F;
   --warn: #9A5B00;
   --bar: #24364A;
-  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
-  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-body: "Source Sans 3", -apple-system, system-ui, "Segoe UI", sans-serif;
   --shadow: 0 1px 2px rgba(20,30,40,.08), 0 6px 20px rgba(20,30,40,.12);
   color-scheme: light;
 }
@@ -63,10 +63,11 @@ a { color: var(--accent); }
 .head { padding-block: 14px 12px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); }
 .brandrow { display: flex; align-items: center; gap: 10px; }
 .brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.blaze { width: 26px; height: 18px; border-radius: 2px; flex: none; background: linear-gradient(var(--accent) 0 33.3%, #FFFFFF 33.3% 66.6%, var(--accent) 66.6%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.logo { width: 32px; height: 32px; flex: none; color: var(--fg); }
 h1 { font: 700 26px/1 var(--f-display); letter-spacing: .01em; margin: 0; }
 h2 { font: 700 21px/1.1 var(--f-display); margin: 0; flex: 1; min-width: 0; }
-h3.sec { font: 700 16px/1.2 var(--f-display); letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
+h3.sec { font: 600 12.5px/1.2 var(--f-body); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--line); }
+.fields h3.sec:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
 .stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13.5px; }
 .stats b { color: var(--fg); font-weight: 600; font-size: 15px; }
 .sync { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -93,17 +94,17 @@ input[type="date"] { min-height: 38px; }
 textarea { resize: vertical; min-height: 70px; }
 @media (min-width: 761px) { select, input[type="search"], input[type="text"], input[type="password"], input[type="url"], input[type="date"], textarea { font-size: 14px; } }
 .switch { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-.switch input { width: 34px; height: 20px; appearance: none; -webkit-appearance: none; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); position: relative; cursor: pointer; margin: 0; flex: none; }
-.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
-.switch input:checked { background: var(--accent); border-color: var(--accent); }
-.switch input:checked::after { transform: translateX(14px); background: #FFFFFF; }
+.switch input[type="checkbox"] { width: 36px; min-width: 36px; height: 20px; appearance: none; -webkit-appearance: none; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); position: relative; cursor: pointer; margin: 0; flex: none; }
+.switch input[type="checkbox"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+.switch input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+.switch input[type="checkbox"]:checked::after { transform: translateX(16px); background: #FFFFFF; }
 
 .tabs { display: flex; gap: 2px; padding-top: 10px; }
-.tab { border: 0; background: none; padding: 8px 10px; font: 600 15px/1 var(--f-display); letter-spacing: .02em; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
+.tab { border: 0; background: none; padding: 8px 10px; font: 600 15px/1 var(--f-body); letter-spacing: .01em; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
 .tab[aria-selected="true"] { color: var(--fg); border-color: var(--accent); }
 .list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0 8px; overscroll-behavior: contain; }
-.year { position: sticky; top: 0; background: var(--bg); padding: 10px 16px 4px max(16px, env(safe-area-inset-left, 0px)); font: 700 15px/1 var(--f-display); color: var(--muted); letter-spacing: .04em; display: flex; justify-content: space-between; z-index: 1; }
-.year span { font: 500 12.5px/1 var(--f-body); font-variant-numeric: tabular-nums; }
+.year { position: sticky; top: 0; background: var(--bg); padding: 10px 16px 4px max(16px, env(safe-area-inset-left, 0px)); font: 600 15px/1 var(--f-display); color: var(--muted); letter-spacing: .01em; display: flex; justify-content: space-between; z-index: 1; }
+.year span { font: 400 12.5px/1 var(--f-body); font-variant-numeric: tabular-nums; }
 .item { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 10px; padding: 8px 16px 8px max(16px, env(safe-area-inset-left, 0px)); cursor: pointer; border: 0; background: none; width: 100%; text-align: left; align-items: baseline; }
 .item:hover, .item.active { background: var(--chip); }
 .item .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); align-self: center; }
@@ -180,8 +181,21 @@ table.t td.num, table.t th.num { text-align: right; }
 .barrow .v { text-align: right; color: var(--muted); }
 .barrow .k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.fitctl { box-shadow: var(--shadow); }
-.fitctl button { border: 0; background: var(--surface); color: var(--fg); font: 600 13px/1 var(--f-body); padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.fitctl { box-shadow: var(--shadow); display: flex; overflow: hidden; border-radius: 8px !important; }
+.fitctl button { border: 0; background: var(--surface); color: var(--fg); font: 600 13.5px/1 var(--f-body); padding: 0 11px; height: 34px; cursor: pointer; display: inline-flex; align-items: center; }
+.fitctl button + button { border-left: 1px solid var(--line); }
+.fitctl svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.grip { display: none; }
+.app.mapfull { grid-template-columns: 1fr; }
+.app.mapfull .panel { display: none; }
+.gxlist { display: grid; gap: 4px; }
+.gxrow { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 4px 4px 4px 10px; font-size: 14px; min-width: 0; }
+.gxrow .n { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gxrow .hh { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gxrow .linkbtn { font-size: 12.5px; white-space: nowrap; }
+.iconbtn.sm { min-width: 28px; height: 28px; padding: 0; }
+.gxsug { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.gxsug:empty { display: none; }
 .pickhint { position: absolute; z-index: 800; left: 50%; top: 12px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 12px; border-radius: 8px; font-size: 14px; box-shadow: var(--shadow); display: flex; gap: 10px; align-items: center; max-width: calc(100% - 120px); }
 .pickhint button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
 .pin { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent); border: 3px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
@@ -219,9 +233,13 @@ table.t td.num, table.t th.num { text-align: right; }
 .toast { position: fixed; z-index: 2000; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 8px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
 
 @media (max-width: 760px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: 50% 50%; }
-  .app.tall { grid-template-rows: 32% 68%; }
+  .app { grid-template-columns: 1fr; grid-template-rows: var(--maph, 50%) minmax(0, 1fr); }
+  .app.tall { grid-template-rows: var(--maph-t, 32%) minmax(0, 1fr); }
   .app.setup { grid-template-rows: 0 100%; }
+  .app.mapfull { grid-template-rows: 100%; }
+  .grip { display: flex; flex: none; height: 22px; align-items: center; justify-content: center; touch-action: none; cursor: row-resize; user-select: none; -webkit-user-select: none; }
+  .grip span { width: 44px; height: 5px; border-radius: 3px; background: var(--muted); opacity: .45; }
+  .app.setup .grip { display: none; }
   .map-wrap { order: 1; }
   .panel { order: 2; border-right: 0; border-top: 1px solid var(--line); }
   #v-browse { overflow-y: auto; }
@@ -237,11 +255,12 @@ table.t td.num, table.t th.num { text-align: right; }
 <body>
 <div class="app" id="app">
   <aside class="panel" aria-label="Gipfelbuch">
+    <div class="grip" id="grip" role="separator" aria-orientation="horizontal" aria-label="Kartengröße ändern (ziehen oder antippen)" tabindex="0"><span></span></div>
 
     <!-- setup -->
     <section class="view" id="v-setup" hidden>
       <div class="vh pad">
-        <span class="blaze" aria-hidden="true"></span><h2>Gipfelbuch einrichten</h2>
+        <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round"><path d="M4 46 C2 32 9 15 25 10 C37 6 47 3 55 11 C62 18 58 29 60 40 C62 52 49 60 34 58 C21 57 6 57 4 46 Z"/><path d="M14 43 C12 33 18 22 28 19 C36 16.5 44 14 48.5 21 C52.5 27 49.5 34 50.5 41 C51.5 48.5 43 51 34 50 C25 49 15.5 50.5 14 43 Z"/><path d="M24.5 38.5 C23.5 32.5 27.5 27.5 33 26.5 C38 25.5 42.5 26.5 42.5 32 C42.5 37 40.5 41.5 34 41.5 C29 41.5 25.5 42 24.5 38.5 Z"/></g><path d="M33.5 28.5 L38 36 L29 36 Z" style="fill:var(--accent)"/></svg><h2>Gipfelbuch einrichten</h2>
         <button class="iconbtn" id="setupBack" type="button" hidden>Zurück</button>
       </div>
       <div class="scroll"><div class="body pad">
@@ -269,7 +288,7 @@ table.t td.num, table.t th.num { text-align: right; }
     <section class="view" id="v-browse" hidden>
       <div class="head pad">
         <div class="brandrow">
-          <div class="brand"><span class="blaze" aria-hidden="true"></span><h1>Gipfelbuch</h1></div>
+          <div class="brand"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round"><path d="M4 46 C2 32 9 15 25 10 C37 6 47 3 55 11 C62 18 58 29 60 40 C62 52 49 60 34 58 C21 57 6 57 4 46 Z"/><path d="M14 43 C12 33 18 22 28 19 C36 16.5 44 14 48.5 21 C52.5 27 49.5 34 50.5 41 C51.5 48.5 43 51 34 50 C25 49 15.5 50.5 14 43 Z"/><path d="M24.5 38.5 C23.5 32.5 27.5 27.5 33 26.5 C38 25.5 42.5 26.5 42.5 32 C42.5 37 40.5 41.5 34 41.5 C29 41.5 25.5 42 24.5 38.5 Z"/></g><path d="M33.5 28.5 L38 36 L29 36 Z" style="fill:var(--accent)"/></svg><h1>Gipfelbuch</h1></div>
           <button class="iconbtn" id="statsBtn" type="button" aria-label="Statistik"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="lbl">Statistik</span></button>
           <button class="iconbtn" id="settingsBtn" type="button" aria-label="Einstellungen und Daten"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
         </div>
@@ -417,7 +436,17 @@ const GRADES = {
   "Klettersteig": ["A", "A/B", "B", "B/C", "C", "C/D", "D", "D/E", "E", "E/F", "F"],
   "Hochtour": SAC, "Skihochtour": SAC
 };
-const LS = { token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2" };
+// sport-specific fields: shown for these sports, or whenever the field already has a value
+const EXTRA = {
+  sch: ["Klettern", "Kletterei", "Klettersteig", "Hochtour", "Skihochtour"],
+  sl: ["Klettern"],
+  lws: ["Skitour", "Skihochtour", "Schneeschuh"],
+  schnee: ["Skitour", "Skihochtour", "Schneeschuh"],
+  huette: ["Hochtour", "Skihochtour", "Wandern"]
+};
+const LWS = ["", "gering", "mäßig", "erheblich", "groß", "sehr groß"];
+const OVERPASS = "https://overpass-api.de/api/interpreter";
+const LS = { token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2", maph: "gb-maph" };
 const DEFAULT_REPO = "maxmm-ctrl/gipfelbuch-daten";
 const FILE = "gipfelbuch.json";
 const XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
@@ -662,17 +691,63 @@ map.attributionControl.setPrefix(false);
 L.control.layers(bases, null, { position: "topright", collapsed: true }).addTo(map);
 map.on("baselayerchange", (e) => lsSet(LS.base, e.name));
 L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
-const FitControl = L.Control.extend({
+const ICON_FULL = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const ICON_SMALL = '<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+const MapControl = L.Control.extend({
   options: { position: "topleft" },
   onAdd() {
     const d = L.DomUtil.create("div", "leaflet-bar fitctl");
-    d.innerHTML = '<button type="button" title="Alle Punkte zeigen">Alle zeigen</button>';
-    L.DomEvent.disableClickPropagation(d);
-    d.firstChild.addEventListener("click", () => fitAll());
+    d.innerHTML = `<button type="button" id="fitBtn" title="Alle Punkte zeigen">Alle zeigen</button><button type="button" id="fullBtn" aria-pressed="false" aria-label="Karte im Vollbild" title="Karte im Vollbild">${ICON_FULL}</button>`;
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.querySelector("#fitBtn").addEventListener("click", () => fitAll());
+    d.querySelector("#fullBtn").addEventListener("click", () => setMapFull(!$("app").classList.contains("mapfull")));
     return d;
   }
 });
-new FitControl().addTo(map);
+new MapControl().addTo(map);
+function setMapFull(on) {
+  const app = $("app"), btn = $("fullBtn");
+  if (app.classList.contains("mapfull") === !!on) return;
+  app.classList.toggle("mapfull", !!on);
+  if (btn) { btn.setAttribute("aria-pressed", on ? "true" : "false"); btn.innerHTML = on ? ICON_SMALL : ICON_FULL; btn.title = on ? "Vollbild beenden" : "Karte im Vollbild"; btn.setAttribute("aria-label", btn.title); }
+  setTimeout(() => map.invalidateSize(), 60);
+}
+// phone: drag the grip between map and list to resize the map; tap cycles 25 / 50 / 75 %
+const mapH = (() => { try { return Object.assign({ b: 50, t: 32 }, JSON.parse(lsGet(LS.maph) || "{}")); } catch (e) { return { b: 50, t: 32 }; } })();
+function applyMapH() { $("app").style.setProperty("--maph", mapH.b + "%"); $("app").style.setProperty("--maph-t", mapH.t + "%"); }
+applyMapH();
+(function gripSetup() {
+  const grip = $("grip");
+  const key = () => $("app").classList.contains("tall") ? "t" : "b";
+  let drag = null, raf = 0;
+  const resizeSoon = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; map.invalidateSize(); }); };
+  const store = () => lsSet(LS.maph, JSON.stringify(mapH));
+  grip.addEventListener("pointerdown", (e) => { drag = { y: e.clientY, moved: false }; try { grip.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } e.preventDefault(); });
+  grip.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientY - drag.y) > 5) drag.moved = true;
+    if (!drag.moved) return;
+    const top = document.querySelector(".map-wrap").getBoundingClientRect().top, bottom = $("app").getBoundingClientRect().bottom;
+    mapH[key()] = Math.round(Math.max(12, Math.min(85, (e.clientY - top) / (bottom - top) * 100)));
+    applyMapH(); resizeSoon();
+  });
+  const end = () => {
+    if (!drag) return;
+    if (!drag.moved) { const k = key(); mapH[k] = [25, 50, 75].find((v) => v > mapH[k] + 2) || 25; applyMapH(); setTimeout(() => map.invalidateSize(), 60); }
+    drag = null; store();
+  };
+  grip.addEventListener("pointerup", end);
+  grip.addEventListener("pointercancel", () => { drag = null; store(); });
+  grip.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    const k = key(); mapH[k] = Math.max(12, Math.min(85, mapH[k] + (e.key === "ArrowDown" ? 5 : -5)));
+    applyMapH(); resizeSoon(); store(); e.preventDefault();
+  });
+})();
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("app").classList.contains("mapfull")) setMapFull(false);
+  if (e.key === "Enter" && e.target && e.target.id && e.target.id.endsWith("-gxq")) { e.preventDefault(); peakSearch(e.target.id.slice(0, -4), "gx"); }
+});
 map.createPane("pts"); map.getPane("pts").style.zIndex = 450;
 const ptsR = L.canvas({ pane: "pts", padding: 0.4, tolerance: 6 });
 const stageLayer = L.layerGroup().addTo(map);
@@ -687,6 +762,7 @@ map.on("zoomend", syncLabels); syncLabels();
 /* ===================== views ===================== */
 const VIEWS = ["setup", "browse", "gpx", "form", "stats", "settings"];
 function show(v) {
+  setMapFull(false);
   for (const x of VIEWS) $("v-" + x).hidden = x !== v;
   state.view = v;
   $("app").classList.toggle("tall", !["browse", "setup"].includes(v));
@@ -710,14 +786,14 @@ function filteredTours() {
     if (state.year && String(t.d || "").slice(0, 4) !== state.year) return false;
     if (state.land && (t.land || "") !== state.land) return false;
     if (state.mt && (t.mt || "") !== state.mt) return false;
-    if (q && ![t.g, t.r, t.p, t.geb, t.land, t.txt, t.s, t.v, t.mt].join(" ").toLowerCase().includes(q)) return false;
+    if (q && ![t.g, t.r, t.p, t.geb, t.land, t.txt, t.s, t.v, t.mt, t.huette, t.schnee, ...(t.gx || []).map((p) => p.g)].join(" ").toLowerCase().includes(q)) return false;
     return true;
   });
 }
 function bucketDone(b) {
   const g = (b.g || "").trim().toLowerCase(), r = (b.r || "").trim().toLowerCase();
   if (!g) return false;
-  return tours().some((t) => (t.g || "").trim().toLowerCase() === g && (!r || (t.r || "").toLowerCase().includes(r)) && t.ok !== "Nein");
+  return tours().some((t) => t.ok !== "Nein" && peakNames(t).some((n) => n.trim().toLowerCase() === g) && (!r || (t.r || "").toLowerCase().includes(r)));
 }
 function filteredBucket() {
   const q = state.q.trim().toLowerCase();
@@ -730,6 +806,20 @@ function filteredBucket() {
   });
 }
 const keyOf = (o) => `${(+o.lat).toFixed(4)},${(+o.lon).toFixed(4)}`;
+const peakNames = (t) => [t.g, ...(t.gx || []).map((p) => p.g)].filter(Boolean);
+// all summits of the given tours that were reached, with height: [{ n, h, t }]
+const peakList = (list) => list.filter((t) => t.ok !== "Nein").flatMap((t) => [t.g ? { n: t.g, h: +t.h || 0, t } : null, ...(t.gx || []).map((p) => ({ n: p.g, h: +p.h || 0, t }))]).filter((p) => p && p.n);
+function cleanGx(list, main) {
+  const seen = new Set([String(main || "").trim().toLowerCase()]), out = [];
+  for (const p of list || []) {
+    const g = String((p && p.g) || "").trim(); if (!g || seen.has(g.toLowerCase())) continue;
+    seen.add(g.toLowerCase());
+    const o = { g }; const h = numIn(p.h, true); if (h && !Number.isNaN(h)) o.h = h;
+    if (hasPos(p)) { o.lat = Math.round(+p.lat * 1e5) / 1e5; o.lon = Math.round(+p.lon * 1e5) / 1e5; }
+    out.push(o);
+  }
+  return out;
+}
 function sportsKnown() {
   const set = new Set(SPORT_ORDER);
   for (const t of tours()) if (t.s) set.add(t.s);
@@ -773,7 +863,7 @@ function renderControls() {
   $("tabBucket").textContent = `Bucketlist (${bucketItems().filter((b) => !bucketDone(b)).length})`;
 }
 function renderStats(T) {
-  const peaks = new Set(T.filter((t) => t.ok !== "Nein").map((t) => (t.g || "").toLowerCase()).filter(Boolean));
+  const peaks = new Set(peakList(T).map((p) => p.n.toLowerCase()));
   const hm = T.reduce((a, t) => a + (+t.hm || 0), 0);
   const km = T.reduce((a, t) => a + (+t.km || 0), 0);
   const days = dayCount(T);
@@ -792,19 +882,27 @@ function renderMarkers(T, B) {
     if (ll.length > 1) stageLayer.addLayer(L.polyline(ll, { color: "#24364A", weight: 3, opacity: 0.85, dashArray: "2 7", lineCap: "round", interactive: false }));
   }
   const groups = new Map();
-  for (const t of T) { if (!hasPos(t)) continue; const k = keyOf(t); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
-  for (const visits of groups.values()) {
-    visits.sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")));
-    const latest = visits[0];
-    const m = L.circleMarker([+latest.lat, +latest.lon], {
-      renderer: ptsR, radius: Math.min(12, 7.5 + (visits.length - 1) * 1.5), color: "#FFFFFF", weight: 2.5,
-      fillColor: colorFor(latest.s), fillOpacity: visits.every((v) => v.ok === "Nein") ? 0.5 : 1
+  const addEntry = (t, name, h, lat, lon, main) => {
+    const k = keyOf({ lat, lon }); if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push({ id: t.id, t, name, h, lat: +lat, lon: +lon, main });
+  };
+  for (const t of T) {
+    if (hasPos(t)) addEntry(t, t.g || t.r || "", t.h, t.lat, t.lon, true);
+    for (const p of t.gx || []) if (hasPos(p)) addEntry(t, p.g, p.h, p.lat, p.lon, false);
+  }
+  for (const entries of groups.values()) {
+    entries.sort((a, b) => String(b.t.d || "").localeCompare(String(a.t.d || "")));
+    const first = entries[0];
+    const onlyExtra = entries.every((e) => !e.main);
+    const m = L.circleMarker([first.lat, first.lon], {
+      renderer: ptsR, radius: Math.min(12, (onlyExtra ? 6.5 : 7.5) + (entries.length - 1) * 1.5), color: "#FFFFFF", weight: 2.5,
+      fillColor: colorFor(first.t.s), fillOpacity: entries.every((e) => e.t.ok === "Nein") ? 0.5 : 1
     });
-    const ids = visits.map((v) => v.id);
-    m.bindPopup(() => tourPopup(ids), { maxWidth: 360, autoPanPadding: [24, 24] });
-    m.bindTooltip(esc(latest.g || latest.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
+    const ref = entries.map((e) => ({ id: e.id, name: e.name, h: e.h, lat: e.lat, lon: e.lon }));
+    m.bindPopup(() => tourPopup(ref), { maxWidth: 360, autoPanPadding: [24, 24] });
+    m.bindTooltip(esc(first.name), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
     tourLayer.addLayer(m);
-    for (const v of visits) markerIndex.set(v.id, m);
+    for (const e of entries) if (e.main || !markerIndex.has(e.id)) markerIndex.set(e.id, m);
   }
   if (!state.showBucket) return;
   for (const b of B) {
@@ -827,24 +925,28 @@ function stageLine(v) {
   const i = dates.indexOf(v.d);
   return `<div class="mtline">↔ <button class="linkbtn" type="button" data-mtf="${esc(v.mt)}">${esc(v.mt)}</button>${i >= 0 && dates.length > 1 ? ` · Tag ${i + 1} von ${dates.length}` : ""}</div>`;
 }
-function tourPopup(ids) {
-  const visits = ids.map((id) => tours().find((t) => t.id === id)).filter(Boolean);
+function tourPopup(ref) {
+  const visits = ref.map((r) => ({ r, t: tours().find((t) => t.id === r.id) })).filter((v) => v.t);
   if (!visits.length) return "";
-  const t = visits[0];
-  const head = [t.h ? nf.format(t.h) + " m" : "", t.geb, t.land].filter(Boolean).join(" · ");
-  let html = `<div class="pp"><h3>${esc(t.g || t.r || "Ohne Namen")}</h3><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
-  for (const v of visits) {
+  const top = visits[0];
+  const head = [top.r.h ? nf.format(top.r.h) + " m" : "", top.t.geb, top.t.land].filter(Boolean).join(" · ");
+  let html = `<div class="pp"><h3>${esc(top.r.name || "Ohne Namen")}</h3><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
+  for (const { r, t: v } of visits) {
     const facts = [+v.tage > 1 && `${v.tage} Tage`, v.sch && `Grad ${v.sch}`, v.sl && `${v.sl} SL`, v.hm && `${nf.format(v.hm)} Hm`, v.km && `${nf1.format(v.km)} km`, v.dur && `${v.dur} h`].filter(Boolean).join(" · ");
+    const winter = [v.lws && `Lawinenwarnstufe ${v.lws}`, v.schnee && `Schnee: ${v.schnee}`].filter(Boolean).join(" · ");
+    const all = peakNames(v);
+    const peaksLine = all.length > 1 ? `<div class="vfacts">${r.name !== v.g ? "Gipfel der Tour" : "Gipfel"}: ${esc(all.join(", "))}</div>` : "";
     html += `<div class="visit">
       ${v.mt ? stageLine(v) : ""}
       <div class="vhead"><span>${esc(fmtDate(v.d))}</span><span class="tag" style="--c:${colorFor(v.s)}">${esc(v.s || "–")}</span>${stars(v.b)}${v.ok === "Nein" ? '<span class="pill no">Umkehr</span>' : ""}</div>
-      ${v.r ? `<div class="vroute">${esc(v.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
+      ${v.r ? `<div class="vroute">${esc(v.r)}</div>` : ""}${peaksLine}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
+      ${winter ? `<div class="vfacts">${esc(winter)}</div>` : ""}${v.huette ? `<div class="vfacts">Hütte: ${esc(v.huette)}</div>` : ""}
       ${v.p ? `<div class="vfacts">mit ${esc(v.p)}</div>` : ""}${v.v ? `<div class="vfacts">${esc(v.v)}</div>` : ""}
       ${v.txt ? `<div class="vtxt">${esc(v.txt)}</div>` : ""}
       <div class="links">${linkHtml(v)}<button class="linkbtn" type="button" data-edit-t="${esc(v.id)}">Bearbeiten</button></div>
     </div>`;
   }
-  const la = (+t.lat).toFixed(5), lo = (+t.lon).toFixed(5);
+  const la = (+top.r.lat).toFixed(5), lo = (+top.r.lon).toFixed(5);
   return html + `<div class="coords"><span>${la}, ${lo}</span><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div></div>`;
 }
 function bucketPopup(id) {
@@ -881,7 +983,7 @@ function renderList(T, B) {
     for (const t of sorted) {
       const y = String(t.d || "").slice(0, 4) || "Ohne Datum";
       if (y !== cur) { cur = y; html += `<div class="year">${esc(y)}<span>${byYear[y].length} Touren · ${nf.format(byYear[y].reduce((a, x) => a + (+x.hm || 0), 0))} Hm</span></div>`; }
-      const meta = [fmtDate(t.d), +t.tage > 1 && `${t.tage} Tage`, t.s, t.r, t.sch, t.mt && `↔ ${t.mt}`].filter(Boolean).join(" · ") + (!hasPos(t) ? " · ohne Koordinaten" : "");
+      const meta = [fmtDate(t.d), +t.tage > 1 && `${t.tage} Tage`, t.s, (t.gx || []).length && `+${t.gx.length} Gipfel`, t.r, t.sch, t.mt && `↔ ${t.mt}`].filter(Boolean).join(" · ") + (!hasPos(t) ? " · ohne Koordinaten" : "");
       html += `<button type="button" class="item${t.ok === "Nein" ? " turned" : ""}" data-id="${esc(t.id)}" data-kind="tour" style="--c:${colorFor(t.s)}">
         <span class="dot"></span><span class="t">${esc(t.g || t.r || "Ohne Namen")}</span><span class="r">${t.hm ? nf.format(t.hm) + " Hm" : ""}</span>
         <span class="meta">${esc(meta)}</span></button>`;
@@ -945,12 +1047,14 @@ $("gpxBtn").addEventListener("click", () => { show("gpx"); if (!gpxItems.length)
 /* ===================== forms ===================== */
 const TOUR_FIELDS = [
   ["sec", "Tour"], ["d", "Datum (erster Tag)", "date"], ["tage", "Tage", "int"], ["s", "Sportart", "sport"], ["ok", "Gipfel erreicht", "ok"],
-  ["g", "Gipfel / Ziel", "peak", "full"], ["r", "Route", "text", "full"], ["geb", "Gebirgsgruppe", "text"], ["land", "Land", "text"],
+  ["g", "Gipfel / Ziel", "peak", "full"], ["gx", "Weitere Gipfel", "gx", "full"], ["r", "Route", "text", "full"],
+  ["geb", "Gebirgsgruppe", "text"], ["land", "Land", "text"], ["huette", "Hütte", "huette", "full"],
   ["sec", "Zahlen"], ["h", "Gipfelhöhe (m)", "int"], ["hm", "Höhenmeter", "int"], ["km", "Distanz (km)", "num"], ["dur", "Dauer (h:mm)", "dur"],
   ["sch", "Schwierigkeit", "grade"], ["sl", "Seillängen", "int"],
-  ["sec", "Erlebnis"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"], ["v", "Verhältnisse / Wetter", "text", "full"], ["txt", "Beschreibung", "area", "full"],
+  ["sec", "Erlebnis"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"], ["lws", "Lawinenwarnstufe", "lws"], ["schnee", "Schnee", "text"],
+  ["v", "Verhältnisse / Wetter", "text", "full"], ["txt", "Beschreibung", "area", "full"],
   ["sec", "Links"], ["lr", "Routenbeschreibung", "url", "full"], ["lt", "Track (Suunto, Strava …)", "url", "full"], ["lf", "Fotos", "url", "full"],
-  ["sec", "Ort und Mehrtagestour"], ["coord", "Koordinaten", "coord", "full"], ["mt", "Mehrtagestour (Name)", "mt", "full"]
+  ["sec", "Ort und Mehrtagestour"], ["coord", "Koordinaten (Hauptgipfel)", "coord", "full"], ["mt", "Mehrtagestour (Name)", "mt", "full"]
 ];
 const BUCKET_FIELDS = [
   ["sec", "Ziel"], ["prio", "Priorität", "prio"], ["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak", "full"], ["r", "Route", "text", "full"],
@@ -962,6 +1066,11 @@ let form = null; // { kind, obj, isNew }
 function fieldHtml(o, [k, label, type, w], prefix = "f") {
   if (k === "sec") return `<h3 class="sec">${esc(label)}</h3>`;
   const id = `${prefix}-${k}`;
+  if (type === "gx") {
+    return `<div class="field full"><span>${esc(label)}</span><div class="gxlist" id="${prefix}-gxlist"></div><div class="gxsug" id="${prefix}-gxsug"></div>
+      <div class="inline"><input id="${prefix}-gxq" type="text" placeholder="Gipfel suchen oder Namen eintippen" autocomplete="off" aria-label="Weiteren Gipfel suchen"><button class="btn" type="button" data-peaksearch="${prefix}" data-mode="gx">Hinzufügen</button></div>
+      <div class="results" id="${prefix}-gxres"></div></div>`;
+  }
   const val = k === "coord" ? fmtCoord(o) : o[k];
   let input;
   if (type === "sport") {
@@ -969,6 +1078,11 @@ function fieldHtml(o, [k, label, type, w], prefix = "f") {
     input = `<select id="${id}" data-k="${k}"><option value="">– wählen –</option>${list.map((s) => `<option${s === v ? " selected" : ""}>${esc(s)}</option>`).join("")}${v && !list.includes(v) ? `<option selected>${esc(v)}</option>` : ""}<option value="__neu">Andere Sportart …</option></select>`;
   } else if (type === "stars") input = `<select id="${id}" data-k="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}"${+val === n ? " selected" : ""}>${"★".repeat(n)}</option>`).join("")}</select>`;
   else if (type === "ok") input = `<select id="${id}" data-k="${k}">${["Ja", "Nein", "–"].map((x) => `<option${x === (val || "Ja") ? " selected" : ""}>${x}</option>`).join("")}</select>`;
+  else if (type === "lws") input = `<select id="${id}" data-k="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}"${+val === n ? " selected" : ""}>${n} · ${LWS[n]}</option>`).join("")}</select>`;
+  else if (type === "huette") {
+    const names = [...new Set(tours().map((t) => t.huette).filter(Boolean))];
+    input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(val || "")}" placeholder="z. B. Simonyhütte" autocomplete="off"><datalist id="${id}-dl">${names.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>`;
+  }
   else if (type === "prio") input = `<select id="${id}" data-k="${k}">${["Hoch", "Mittel", "Irgendwann"].map((x) => `<option${x === (val || "Mittel") ? " selected" : ""}>${x}</option>`).join("")}</select>`;
   else if (type === "area") input = `<textarea id="${id}" data-k="${k}" rows="3">${esc(val)}</textarea>`;
   else if (type === "date") input = `<input id="${id}" data-k="${k}" type="date" value="${esc(val || "")}">`;
@@ -990,10 +1104,11 @@ function openForm(kind, id, preset) {
   const list = kind === "tour" ? tours() : bucketItems();
   const existing = id ? list.find((x) => x.id === id) : null;
   const obj = existing ? JSON.parse(JSON.stringify(existing)) : (preset || (kind === "tour" ? { d: todayIso(), ok: "Ja" } : { prio: "Mittel" }));
-  form = { kind, obj, isNew: !existing };
+  form = { kind, obj, isNew: !existing, gx: JSON.parse(JSON.stringify(obj.gx || [])) };
   $("formTitle").textContent = kind === "tour" ? (existing ? "Tour bearbeiten" : "Neue Tour") : (existing ? "Ziel bearbeiten" : "Neues Bucketlist-Ziel");
   const defs = kind === "tour" ? TOUR_FIELDS : BUCKET_FIELDS;
   $("formBody").innerHTML = `<div class="fields">${defs.map((f) => fieldHtml(obj, f)).join("")}</div>`;
+  renderGx("f"); applyVisibility("f");
   const del = $("formDelete"); del.hidden = !existing; del.dataset.armed = ""; del.classList.remove("armed"); del.textContent = "Löschen";
   $("formStatus").textContent = ""; $("formStatus").classList.remove("err");
   $("formSave").disabled = false;
@@ -1016,7 +1131,7 @@ function readForm() {
     const raw = el.value;
     if (type === "int" || type === "num") { const n = numIn(raw, type === "int"); if (Number.isNaN(n)) errs.push(`${label}: keine Zahl`); else if (n == null) delete o[k]; else o[k] = n; }
     else if (type === "dur") { const d = durIn(raw); if (d === null) errs.push(`${label}: bitte als Stunden:Minuten, z. B. 5:30`); else if (!d) delete o[k]; else o[k] = d; }
-    else if (type === "stars") { if (raw) o[k] = +raw; else delete o[k]; }
+    else if (type === "stars" || type === "lws") { if (raw) o[k] = +raw; else delete o[k]; }
     else if (type === "coord") {
       const c = parseCoord(raw);
       if (raw.trim() && !c) errs.push("Koordinaten: bitte als Breite, Länge, z. B. 47.07472, 12.69389");
@@ -1026,6 +1141,7 @@ function readForm() {
     else if (type === "sport") { if (raw && raw !== "__neu") o[k] = raw.trim(); else delete o[k]; }
     else { const v = raw.trim(); if (v) o[k] = v; else delete o[k]; }
   }
+  if (form.kind === "tour") { const gx = cleanGx(form.gx, o.g); if (gx.length) o.gx = gx; else delete o.gx; }
   if (!o.g && !o.r) errs.push("Bitte Gipfel / Ziel oder Route angeben.");
   if (!o.s) errs.push("Bitte eine Sportart wählen.");
   return { o, errs };
@@ -1037,7 +1153,7 @@ $("formBody").addEventListener("change", (e) => {
     wrap.innerHTML = `<span>Sportart</span><input id="f-s" data-k="s" type="text" placeholder="z. B. Eisklettern" autocomplete="off">`;
     $("f-s").focus(); return;
   }
-  if (el.dataset.k === "s") { form.obj.s = el.value; const dl = $("f-sch-dl"); if (dl) dl.innerHTML = (GRADES[el.value] || []).map((g) => `<option value="${esc(g)}"></option>`).join(""); }
+  if (el.dataset.k === "s") { form.obj.s = el.value; const dl = $("f-sch-dl"); if (dl) dl.innerHTML = (GRADES[el.value] || []).map((g) => `<option value="${esc(g)}"></option>`).join(""); applyVisibility("f"); }
   if (el.dataset.k === "coord") updateFormMarker(true);
 });
 $("formBody").addEventListener("input", (e) => { if (e.target.dataset.k === "coord") updateFormMarker(false); });
@@ -1050,6 +1166,56 @@ function updateFormMarker(fly) {
   formLayer.addLayer(m);
   if (fly) map.setView([c.lat, c.lon], Math.max(map.getZoom(), 12));
 }
+function applyVisibility(prefix) {
+  const sEl = $(`${prefix}-s`), sport = sEl ? sEl.value : "";
+  for (const k of Object.keys(EXTRA)) {
+    const el = $(`${prefix}-${k}`); if (!el) continue;
+    const wrap = el.closest(".field"); if (!wrap) continue;
+    wrap.hidden = !(EXTRA[k].includes(sport) || String(el.value || "").trim() !== "");
+  }
+}
+const gpxItemOf = (prefix) => gpxItems.find((x) => "g-" + x.id === prefix);
+function gxListOf(prefix) {
+  if (prefix === "f") { if (!form) return []; return (form.gx = form.gx || []); }
+  const it = gpxItemOf(prefix); if (!it) return [];
+  return (it.gx = it.gx || []);
+}
+function renderGx(prefix) {
+  const box = $(`${prefix}-gxlist`); if (!box) return;
+  const list = gxListOf(prefix);
+  box.innerHTML = list.map((p, i) => `<div class="gxrow"><span class="n">${esc(p.g)}</span><span class="hh">${p.h ? nf.format(p.h) + " m" : ""}${hasPos(p) ? "" : (p.h ? " · " : "") + "ohne Ort"}</span>
+    <button class="linkbtn" type="button" data-gxmain="${i}" data-prefix="${prefix}">Zum Hauptgipfel</button>
+    <button class="iconbtn sm" type="button" data-gxdel="${i}" data-prefix="${prefix}" aria-label="${esc(p.g)} entfernen">×</button></div>`).join("");
+  const sug = $(`${prefix}-gxsug`); if (!sug) return;
+  const it = prefix === "f" ? null : gpxItemOf(prefix);
+  const mainEl = $(`${prefix}-g`), main = String((mainEl && mainEl.value) || "").trim().toLowerCase();
+  const have = new Set(list.map((p) => String(p.g).toLowerCase()));
+  const cand = it ? (it.trackPeaks || []).filter((p) => !have.has(p.name.toLowerCase()) && p.name.toLowerCase() !== main) : [];
+  sug.innerHTML = cand.length ? `<span class="note">Am Weg gefunden:</span>${cand.map((p) => `<button type="button" class="chip" data-gxadd="${esc(p.name)}" data-prefix="${prefix}">+ ${esc(p.name)}${p.ele ? " · " + nf.format(p.ele) + " m" : ""}<span class="n">${Math.round(p.dist)} m vom Track</span></button>`).join("")}` : "";
+}
+function gxMakeMain(prefix, i) {
+  const list = gxListOf(prefix), p = list[i]; if (!p) return;
+  const gEl = $(`${prefix}-g`), hEl = $(`${prefix}-h`), cEl = $(`${prefix}-coord`);
+  const old = { g: String((gEl && gEl.value) || "").trim(), h: hEl ? numIn(hEl.value, true) : null, ...(parseCoord(cEl && cEl.value) || {}) };
+  list.splice(i, 1, ...(old.g ? [old] : []));
+  const set = (el, v) => { if (el) { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true })); } };
+  set(gEl, p.g); set(hEl, p.h ? numOut(p.h) : ""); set(cEl, hasPos(p) ? fmtCoord(p) : "");
+  renderGx(prefix);
+  if (prefix === "f") updateFormMarker(true);
+}
+document.addEventListener("click", (e) => {
+  const del = e.target.closest("[data-gxdel]"), mk = e.target.closest("[data-gxmain]"), add = e.target.closest("[data-gxadd]");
+  const btn = del || mk || add; if (!btn) return;
+  const prefix = btn.dataset.prefix, it = prefix === "f" ? null : gpxItemOf(prefix);
+  if (it) it.gxTouched = true;
+  if (del) { gxListOf(prefix).splice(+del.dataset.gxdel, 1); renderGx(prefix); }
+  else if (mk) gxMakeMain(prefix, +mk.dataset.gxmain);
+  else if (add && it) {
+    const p = (it.trackPeaks || []).find((x) => x.name === add.dataset.gxadd);
+    if (p) { gxListOf(prefix).push({ g: p.name, h: p.ele || undefined, lat: p.lat, lon: p.lon }); renderGx(prefix); }
+  }
+  if (it) { saveGpx(); drawPreview(true); }
+});
 let pickTarget = null;
 function setPick(on, target) {
   pickTarget = on ? target : null;
@@ -1066,14 +1232,17 @@ map.on("click", (e) => {
 });
 document.addEventListener("click", (e) => {
   const p = e.target.closest("[data-pick]"); if (p) { setPick(true, p.dataset.pick); toast("Tippe jetzt auf die Karte."); return; }
-  const s = e.target.closest("[data-peaksearch]"); if (s) { peakSearch(s.dataset.peaksearch); return; }
+  const s = e.target.closest("[data-peaksearch]"); if (s) { peakSearch(s.dataset.peaksearch, s.dataset.mode); return; }
   const r = e.target.closest("[data-peakpick]"); if (r) { applyPeakResult(r); return; }
 });
 const lastResults = {};
-async function peakSearch(prefix) {
-  const inp = $(`${prefix}-g`), box = $(`${prefix}-results`);
+async function peakSearch(prefix, mode) {
+  const gx = mode === "gx";
+  const inp = $(`${prefix}-${gx ? "gxq" : "g"}`), box = $(`${prefix}-${gx ? "gxres" : "results"}`);
+  if (!inp || !box) return;
   const q = inp.value.trim();
   if (!q) { box.innerHTML = `<span class="note">Erst einen Namen eintippen, z. B. Großglockner.</span>`; return; }
+  const manual = gx ? `<button type="button" data-peakpick="-1" data-prefix="${prefix}" data-mode="gx">»${esc(q)}« ohne Ort hinzufügen<small>nur der Name, ohne Punkt auf der Karte</small></button>` : "";
   box.innerHTML = `<span class="note">Suche in OpenStreetMap …</span>`;
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=1&extratags=1&accept-language=de&q=${encodeURIComponent(q)}`);
@@ -1084,15 +1253,29 @@ async function peakSearch(prefix) {
       country: (x.address && x.address.country) || "", peak: x.category === "natural" && /peak|volcano/.test(x.type || ""),
       where: [x.address && (x.address.county || x.address.state), x.address && x.address.country].filter(Boolean).join(", "), type: x.type
     })).sort((a, b) => (b.peak - a.peak));
-    lastResults[prefix] = list;
-    if (!list.length) { box.innerHTML = `<span class="note">Nichts gefunden. Anders schreiben oder den Punkt »Auf Karte« setzen.</span>`; return; }
-    box.innerHTML = list.slice(0, 6).map((x, i) => `<button type="button" data-peakpick="${i}" data-prefix="${prefix}">${esc(x.name)}${x.ele ? " · " + nf.format(x.ele) + " m" : ""}<small>${esc(x.peak ? "Gipfel" : x.type || "")}${x.where ? " · " + esc(x.where) : ""}</small></button>`).join("");
+    lastResults[prefix + (gx ? ":gx" : "")] = list;
+    if (!list.length) { box.innerHTML = gx ? manual : `<span class="note">Nichts gefunden. Anders schreiben oder den Punkt »Auf Karte« setzen.</span>`; return; }
+    box.innerHTML = list.slice(0, 6).map((x, i) => `<button type="button" data-peakpick="${i}" data-prefix="${prefix}" data-mode="${gx ? "gx" : ""}">${esc(x.name)}${x.ele ? " · " + nf.format(x.ele) + " m" : ""}<small>${esc(x.peak ? "Gipfel" : x.type || "")}${x.where ? " · " + esc(x.where) : ""}</small></button>`).join("") + manual;
   } catch (e) {
-    box.innerHTML = `<span class="note">Suche gerade nicht möglich (keine Verbindung zu OpenStreetMap).</span>`;
+    box.innerHTML = `<span class="note">Suche gerade nicht möglich (keine Verbindung zu OpenStreetMap).</span>` + manual;
   }
 }
 function applyPeakResult(btn) {
-  const prefix = btn.dataset.prefix, x = (lastResults[prefix] || [])[+btn.dataset.peakpick]; if (!x) return;
+  const prefix = btn.dataset.prefix;
+  if (btn.dataset.mode === "gx") {
+    const q = ($(`${prefix}-gxq`) || {}).value || "";
+    const x = +btn.dataset.peakpick < 0 ? { name: q.trim() } : (lastResults[prefix + ":gx"] || [])[+btn.dataset.peakpick];
+    if (!x || !x.name) return;
+    gxListOf(prefix).push({ g: x.name, h: x.ele || undefined, ...(isFinite(x.lat) ? { lat: x.lat, lon: x.lon } : {}) });
+    $(`${prefix}-gxq`).value = ""; $(`${prefix}-gxres`).innerHTML = "";
+    renderGx(prefix);
+    const it = prefix === "f" ? null : gpxItemOf(prefix);
+    if (it) { it.gxTouched = true; saveGpx(); drawPreview(true); }
+    return;
+  }
+  const x = (lastResults[prefix] || [])[+btn.dataset.peakpick]; if (!x) return;
+  const gl = gxListOf(prefix), gi = gl.findIndex((p) => String(p.g).toLowerCase() === x.name.toLowerCase());
+  if (gi >= 0) { gl.splice(gi, 1); renderGx(prefix); }
   const set = (k, v) => { const el = $(`${prefix}-${k}`); if (el && v != null && v !== "") { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); } };
   set("g", x.name); set("coord", `${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}`);
   if (x.ele) set("h", numOut(x.ele));
@@ -1202,13 +1385,26 @@ async function fetchJson(url, opts) {
   try { const r = await fetch(url, { ...opts, signal: ctl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
   finally { clearTimeout(tm); }
 }
-async function nearbyPeaks(lat, lon, radius) {
-  const q = `[out:json][timeout:20];node["natural"~"^(peak|volcano)$"]["name"](around:${radius},${lat},${lon});out body;`;
-  const data = await fetchJson("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-  return (data.elements || []).map((e) => ({
-    name: e.tags.name, ele: e.tags.ele ? Math.round(parseFloat(String(e.tags.ele).replace(",", "."))) || null : null,
-    lat: e.lat, lon: e.lon, dist: hav({ lat, lon }, { lat: e.lat, lon: e.lon })
-  })).sort((a, b) => a.dist - b.dist);
+// all named summits around the track, with their distance to the track and to the highest point
+async function trackPeaks(pts, top) {
+  let s = 90, w = 180, n = -90, e = -180;
+  for (const p of pts) { if (p.lat < s) s = p.lat; if (p.lat > n) n = p.lat; if (p.lon < w) w = p.lon; if (p.lon > e) e = p.lon; }
+  const pad = 0.015;
+  const q = `[out:json][timeout:25];node["natural"~"^(peak|volcano)$"]["name"](${(s - pad).toFixed(5)},${(w - pad).toFixed(5)},${(n + pad).toFixed(5)},${(e + pad).toFixed(5)});out body;`;
+  const data = await fetchJson(OVERPASS, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+  const step = Math.max(1, Math.ceil(pts.length / 3000));
+  const tp = pts.filter((_, i) => i % step === 0);
+  const cosLat = Math.cos(((s + n) / 2) * Math.PI / 180);
+  return (data.elements || []).filter((el) => el.tags && el.tags.name).map((el) => {
+    const pk = { name: el.tags.name, ele: el.tags.ele ? Math.round(parseFloat(String(el.tags.ele).replace(",", "."))) || null : null, lat: el.lat, lon: el.lon };
+    let best = Infinity, bi = 0;
+    for (let i = 0; i < tp.length; i++) {
+      const dx = (tp[i].lon - pk.lon) * cosLat * 111320, dy = (tp[i].lat - pk.lat) * 110540, d = dx * dx + dy * dy;
+      if (d < best) { best = d; bi = i; }
+    }
+    pk.dist = Math.sqrt(best); pk.order = bi; pk.distTop = top ? hav(top, pk) : Infinity;
+    return pk;
+  });
 }
 async function countryOf(lat, lon) {
   const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=3&accept-language=de`);
@@ -1235,6 +1431,7 @@ async function addGpxFiles(files) {
         id: "g" + (++gpxSeq), file: f.name, take: true, pts, a, peaks: [], lookup: "wartet",
         d: a.d, s: guessSport(type, name, f.name), g: "", r: "", geb: "", land: "", h: a.top && a.top.ele != null ? a.top.ele : "",
         hm: a.hm ?? "", km: a.km || "", dur: a.dur, sch: "", sl: "", p: "", v: "", b: "", ok: "Ja", txt: "", lr: "", lt: "", lf: "", mt: "", tage: "",
+        lws: "", schnee: "", huette: "", gx: [], trackPeaks: [],
         coord: a.top ? `${a.top.lat.toFixed(5)}, ${a.top.lon.toFixed(5)}` : ""
       };
       it.dup = dupsOf(a.d); if (it.dup.length) it.take = false;
@@ -1251,26 +1448,33 @@ function queueLookup(it) {
     it.lookup = "läuft";
     const { lat, lon } = it.a.top;
     try {
-      const peaks = await nearbyPeaks(lat, lon, 1500);
-      it.peaks = peaks.slice(0, 8);
-      const best = peaks.find((p) => p.dist <= 500);
-      if (best && !it.g) {
-        it.g = best.name; if (best.ele) it.h = best.ele;
-        it.coord = `${best.lat.toFixed(5)}, ${best.lon.toFixed(5)}`;
-        it.peakNote = `Gipfel aus OpenStreetMap: ${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.dist)} m vom höchsten Punkt.`;
-      } else if (peaks.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${peaks.slice(0, 3).map((p) => p.name).join(", ")}.`;
-      else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen.";
+      const all = await trackPeaks(it.pts, it.a.top);
+      const near = all.filter((p) => p.distTop <= 1500).sort((a, b) => a.distTop - b.distTop);
+      it.peaks = near.slice(0, 8).map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.distTop }));
+      const best = near.find((p) => p.distTop <= 500);
+      const onTrack = all.filter((p) => p.dist <= 300).sort((a, b) => a.order - b.order);
+      it.trackPeaks = onTrack.map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.dist }));
+      if (best && !it.g) { it.g = best.name; if (best.ele) it.h = best.ele; it.coord = `${best.lat.toFixed(5)}, ${best.lon.toFixed(5)}`; }
+      const mainName = String(it.g || "").trim().toLowerCase();
+      if (!it.gxTouched) it.gx = onTrack.filter((p) => p.dist <= 120 && p.name.toLowerCase() !== mainName).map((p) => ({ g: p.name, h: p.ele || undefined, lat: p.lat, lon: p.lon }));
+      const nx = (it.gx || []).length;
+      const extra = nx ? ` ${nx} weitere${nx === 1 ? "r" : ""} Gipfel am Weg erkannt.` : "";
+      if (best) it.peakNote = `Gipfel aus OpenStreetMap: ${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.distTop)} m vom höchsten Punkt.${extra}`;
+      else if (near.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${near.slice(0, 3).map((p) => p.name).join(", ")}.${extra}`;
+      else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen." + extra;
     } catch (e) { it.peakNote = "Gipfelvorschlag gerade nicht möglich (keine Verbindung zu OpenStreetMap). Bitte selbst eintragen."; }
     try { await sleep(1100); if (!it.land) it.land = await countryOf(lat, lon); } catch (e) { /* country stays empty */ }
     it.lookup = "fertig";
     if (gpxItems.includes(it)) refreshCard(it);
   });
 }
-const G_MAIN = [["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak", "full"], ["h", "Gipfelhöhe (m)", "int"], ["land", "Land", "text"], ["r", "Route", "text", "full"], ["geb", "Gebirgsgruppe", "text"], ["mt", "Mehrtagestour (Name)", "mt"]];
+const G_MAIN = [["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak", "full"], ["gx", "Weitere Gipfel", "gx", "full"], ["h", "Gipfelhöhe (m)", "int"], ["land", "Land", "text"],
+  ["r", "Route", "text", "full"], ["geb", "Gebirgsgruppe", "text"], ["mt", "Mehrtagestour (Name)", "mt"],
+  ["sch", "Schwierigkeit", "grade"], ["sl", "Seillängen", "int"], ["lws", "Lawinenwarnstufe", "lws"], ["schnee", "Schnee", "text"], ["huette", "Hütte", "huette", "full"]];
 const G_MORE = [["d", "Datum (erster Tag)", "date"], ["tage", "Tage", "int"], ["dur", "Dauer (h:mm)", "dur"], ["hm", "Höhenmeter", "int"], ["km", "Distanz (km)", "num"],
-  ["sch", "Schwierigkeit", "grade"], ["sl", "Seillängen", "int"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"], ["ok", "Gipfel erreicht", "ok"],
+  ["p", "Partner", "text"], ["b", "Bewertung", "stars"], ["ok", "Gipfel erreicht", "ok"],
   ["v", "Verhältnisse / Wetter", "text", "full"], ["txt", "Beschreibung", "area", "full"], ["lt", "Link Track (Suunto, Strava …)", "url", "full"],
-  ["lr", "Link Routenbeschreibung", "url", "full"], ["lf", "Link Fotos", "url", "full"], ["coord", "Koordinaten", "coord", "full"]];
+  ["lr", "Link Routenbeschreibung", "url", "full"], ["lf", "Link Fotos", "url", "full"], ["coord", "Koordinaten (Hauptgipfel)", "coord", "full"]];
 const peakButtons = (it) => it.peaks.slice(0, 5).map((p, i) => `<button type="button" data-npeak="${i}" data-item="${it.id}">${esc(p.name)}${p.ele ? " · " + nf.format(p.ele) + " m" : ""}<small>${Math.round(p.dist)} m vom höchsten Punkt</small></button>`).join("");
 function gpxFieldHtml(it, def) {
   const o = { ...it };
@@ -1301,6 +1505,7 @@ function cardHtml(it) {
 }
 function renderCards() {
   $("cards").innerHTML = gpxItems.map(cardHtml).join("");
+  for (const it of gpxItems) { renderGx("g-" + it.id); applyVisibility("g-" + it.id); }
   $("drop").querySelector("b").textContent = gpxItems.length ? "Weitere GPX-Datei hinzufügen" : "GPX-Datei wählen";
   updateGpxSave(); updateMultiBar(); saveGpx();
 }
@@ -1313,6 +1518,7 @@ function refreshCard(it) {
     const v = k === "h" ? numOut(it[k]) : (it[k] ?? "");
     if (inp && document.activeElement !== inp && inp.value !== String(v)) inp.value = v;
   }
+  renderGx("g-" + it.id);
   drawPreview(true); saveGpx();
 }
 const itemOf = (el) => { const card = el.closest(".card"); return card ? gpxItems.find((x) => x.id === card.dataset.id) : null; };
@@ -1320,6 +1526,7 @@ $("cards").addEventListener("input", (e) => {
   const it = itemOf(e.target), k = e.target.dataset.k; if (!it || !k) return;
   it[k] = e.target.value;
   if (k === "coord" || k === "s") drawPreview(true);
+  if (k === "g") renderGx("g-" + it.id);
   saveGpx();
 });
 $("cards").addEventListener("change", (e) => {
@@ -1332,7 +1539,7 @@ $("cards").addEventListener("change", (e) => {
       $(`g-${it.id}-s`).focus(); it.s = ""; return;
     }
     it[e.target.dataset.k] = e.target.value;
-    if (e.target.dataset.k === "s") { const dl = $(`g-${it.id}-sch-dl`); if (dl) dl.innerHTML = (GRADES[it.s] || []).map((g) => `<option value="${esc(g)}"></option>`).join(""); }
+    if (e.target.dataset.k === "s") { const dl = $(`g-${it.id}-sch-dl`); if (dl) dl.innerHTML = (GRADES[it.s] || []).map((g) => `<option value="${esc(g)}"></option>`).join(""); applyVisibility("g-" + it.id); }
   }
   saveGpx();
 });
@@ -1340,7 +1547,7 @@ $("cards").addEventListener("click", (e) => {
   const np = e.target.closest("[data-npeak]");
   if (np) {
     const it = gpxItems.find((x) => x.id === np.dataset.item), p = it && it.peaks[+np.dataset.npeak];
-    if (p) { it.g = p.name; if (p.ele) it.h = p.ele; it.coord = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`; refreshCard(it); }
+    if (p) { it.g = p.name; if (p.ele) it.h = p.ele; it.coord = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`; it.gx = (it.gx || []).filter((x) => String(x.g).toLowerCase() !== p.name.toLowerCase()); refreshCard(it); }
     return;
   }
   if (e.target.closest("[data-split]")) {
@@ -1390,6 +1597,12 @@ $("mergeBtn").addEventListener("click", () => {
     txt: parts.map((x) => x.txt).filter(Boolean).join(" "), lr: firstOf("lr"), lt: firstOf("lt"), lf: firstOf("lf"), coord: hi.coord,
     mt: $("mtName").value.trim(), tage: dates.length > 1 ? dates.length : ""
   };
+  const allPk = [];
+  for (const x of parts) { if (String(x.g || "").trim()) allPk.push({ g: String(x.g).trim(), h: numIn(x.h, true), ...(parseCoord(x.coord) || {}) }); for (const p of x.gx || []) allPk.push(p); }
+  merged.gx = cleanGx(allPk, merged.g); merged.gxTouched = true;
+  const seenTp = new Set(); merged.trackPeaks = parts.flatMap((x) => x.trackPeaks || []).filter((p) => !seenTp.has(p.name) && seenTp.add(p.name));
+  merged.lws = firstOf("lws"); merged.schnee = [...new Set(parts.map((x) => x.schnee).filter(Boolean))].join(" / ");
+  merged.huette = [...new Set(parts.map((x) => x.huette).filter(Boolean))].join(", ");
   merged.dup = dupsOf(merged.d); if (merged.dup.length) merged.take = false;
   const at = gpxItems.indexOf(sel[0]);
   gpxItems = gpxItems.filter((x) => !sel.includes(x));
@@ -1411,6 +1624,8 @@ function drawPreview(keepView) {
     const c = parseCoord(it.coord);
     if (c) previewLayer.addLayer(L.circleMarker([c.lat, c.lon], { renderer: ptsR, radius: 8, color: "#FFFFFF", weight: 2.5, fillColor: colorFor(it.s), fillOpacity: 1 })
       .bindTooltip(esc(it.g || "Höchster Punkt"), { direction: "top", offset: [0, -8] }));
+    for (const p of it.gx || []) if (hasPos(p)) previewLayer.addLayer(L.circleMarker([+p.lat, +p.lon], { renderer: ptsR, radius: 6, color: "#FFFFFF", weight: 2, fillColor: colorFor(it.s), fillOpacity: 0.85 })
+      .bindTooltip(esc(p.g), { direction: "top", offset: [0, -6] }));
   }
   if (!keepView && gpxItems.length) { const b = L.latLngBounds([]); previewLayer.eachLayer((l) => b.extend(l.getBounds ? l.getBounds() : l.getLatLng())); if (b.isValid()) map.fitBounds(b, { padding: [30, 30], maxZoom: 14 }); }
 }
@@ -1419,7 +1634,9 @@ function tourFromGpx(it) {
   const errs = [];
   const put = (k, v) => { if (v != null && v !== "" && !Number.isNaN(v)) o[k] = v; };
   put("d", it.d); put("s", it.s && it.s !== "__neu" ? String(it.s).trim() : ""); put("g", String(it.g || "").trim()); put("r", String(it.r || "").trim());
-  for (const k of ["geb", "land", "sch", "p", "v", "txt", "mt"]) put(k, String(it[k] || "").trim());
+  for (const k of ["geb", "land", "sch", "p", "v", "txt", "mt", "schnee", "huette"]) put(k, String(it[k] || "").trim());
+  const lws = +it.lws; if (lws >= 1 && lws <= 5) o.lws = lws;
+  const gx = cleanGx(it.gx, o.g); if (gx.length) o.gx = gx;
   for (const [k, l] of [["h", "Gipfelhöhe"], ["hm", "Höhenmeter"], ["sl", "Seillängen"], ["tage", "Tage"]]) { const n = numIn(it[k], true); if (Number.isNaN(n)) errs.push(l); else put(k, n); }
   const km = numIn(it.km); if (Number.isNaN(km)) errs.push("Distanz"); else put("km", km);
   const dur = durIn(it.dur); if (dur === null) errs.push("Dauer"); else put("dur", dur);
@@ -1471,11 +1688,11 @@ function updateGpxBadge() { const n = gpxItems.length; $("gpxBtn").textContent =
 function renderStatsView() {
   const T = filteredTours();
   const filtersOn = state.sportsOff.size || state.year || state.land || state.mt || state.q;
-  const reached = T.filter((t) => t.ok !== "Nein");
-  const peaks = new Set(reached.map((t) => (t.g || "").toLowerCase()).filter(Boolean));
+  const allPeaks = peakList(T);
+  const peaks = new Set(allPeaks.map((p) => p.n.toLowerCase()));
   const sum = (list, k) => list.reduce((a, t) => a + (+t[k] || 0), 0);
   const mins = T.reduce((a, t) => a + durMin(t.dur), 0);
-  const hi = [...reached].filter((t) => +t.h).sort((a, b) => b.h - a.h)[0];
+  const hi = allPeaks.filter((p) => p.h).sort((a, b) => b.h - a.h)[0];
   const hmMax = [...T].filter((t) => +t.hm).sort((a, b) => b.hm - a.hm)[0];
   const kpi = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
   let html = filtersOn ? `<p class="note" style="margin:0">Gilt für die aktuellen Filter der Übersicht.</p>` : "";
@@ -1484,7 +1701,7 @@ function renderStatsView() {
     ${kpi(nf.format(T.length), "Touren")}${kpi(nf.format(peaks.size), "verschiedene Gipfel")}
     ${kpi(nf.format(dayCount(T)), "Tage am Berg")}${kpi(nf.format(Math.round(sum(T, "hm"))), "Höhenmeter")}
     ${kpi(nf.format(Math.round(sum(T, "km"))), "Kilometer")}${kpi(minDur(mins) || "–", "Stunden unterwegs")}
-    ${kpi(hi ? esc(hi.g) : "–", hi ? `höchster Gipfel · ${nf.format(hi.h)} m` : "höchster Gipfel")}
+    ${kpi(hi ? esc(hi.n) : "–", hi ? `höchster Gipfel · ${nf.format(hi.h)} m` : "höchster Gipfel")}
     ${kpi(hmMax ? nf.format(hmMax.hm) + " Hm" : "–", hmMax ? `meiste Höhenmeter · ${esc(hmMax.g || hmMax.r)}` : "meiste Höhenmeter")}
   </div>`;
   const years = {};
@@ -1493,7 +1710,7 @@ function renderStatsView() {
   const maxHm = Math.max(1, ...yk.map((y) => sum(years[y], "hm")));
   html += `<h3 class="sec">Höhenmeter pro Jahr</h3><div class="bars">${yk.map((y) => { const v = sum(years[y], "hm"); return `<div class="barrow"><span class="k">${esc(y)}</span><div class="track"><div class="fill" style="width:${(v / maxHm * 100).toFixed(1)}%"></div></div><span class="v">${nf.format(Math.round(v))}</span></div>`; }).join("")}</div>`;
   html += `<div class="tblwrap"><table class="t"><thead><tr><th>Jahr</th><th class="num">Touren</th><th class="num">Gipfel</th><th class="num">Tage</th><th class="num">Hm</th><th class="num">km</th></tr></thead><tbody>
-    ${yk.map((y) => { const Y = years[y]; return `<tr><td>${esc(y)}</td><td class="num">${Y.length}</td><td class="num">${Y.filter((t) => t.ok !== "Nein" && t.g).length}</td><td class="num">${dayCount(Y)}</td><td class="num">${nf.format(Math.round(sum(Y, "hm")))}</td><td class="num">${nf.format(Math.round(sum(Y, "km")))}</td></tr>`; }).join("")}
+    ${yk.map((y) => { const Y = years[y]; return `<tr><td>${esc(y)}</td><td class="num">${Y.length}</td><td class="num">${peakList(Y).length}</td><td class="num">${dayCount(Y)}</td><td class="num">${nf.format(Math.round(sum(Y, "hm")))}</td><td class="num">${nf.format(Math.round(sum(Y, "km")))}</td></tr>`; }).join("")}
   </tbody></table></div>`;
   const sp = {};
   for (const t of T) (sp[t.s || "–"] = sp[t.s || "–"] || []).push(t);
@@ -1553,8 +1770,15 @@ const ALIAS = {
   v: ["verhaltnisse", "wetter", "verhaltnissewetter", "bedingungen"], b: ["bewertung", "sterne"], ok: ["gipfelerreicht", "erreicht"],
   txt: ["beschreibung", "notizen", "notiz", "kommentar"], coord: ["koordinaten", "koordinate", "coords", "position"],
   lat: ["breite", "lat", "latitude", "breitengrad"], lon: ["lange", "lon", "lng", "longitude", "langengrad"],
-  prio: ["prioritat", "prio"], zeit: ["bestezeit", "saison"], mt: ["mehrtagestour", "mehrtagestouren", "tourgruppe", "gruppe", "mehrtagestourname"], tage: ["tage", "anzahltage"]
+  prio: ["prioritat", "prio"], zeit: ["bestezeit", "saison"], mt: ["mehrtagestour", "mehrtagestouren", "tourgruppe", "gruppe", "mehrtagestourname"], tage: ["tage", "anzahltage"],
+  gx: ["weiteregipfel", "gipfelweitere"], lws: ["lawinenwarnstufe", "lws", "lawinenstufe"], schnee: ["schnee", "schneequalitat", "schneeverhaltnisse"], huette: ["hutte", "unterkunft", "huette"]
 };
+function parseGxText(txt) {
+  return String(txt || "").split(/[;\n]+/).map((x) => x.trim()).filter(Boolean).map((x) => {
+    const m = /^(.*?)\s*\((\d[\d.\s]*)\s*m\)\s*$/.exec(x);
+    return m ? { g: m[1].trim(), h: numIn(m[2], true) } : { g: x };
+  });
+}
 function headerMap(row) {
   const m = {}, links = [];
   row.forEach((h, i) => {
@@ -1612,9 +1836,10 @@ function readSheet(ws, X, kind) {
     }
     const bRaw = toText(get("b"));
     if (kind === "tours") Object.assign(o, { d: toIsoDate(get("d"), X), km: toNum(get("km")), dur: toDur(get("dur")), p: toText(get("p")), v: toText(get("v")),
-      b: (bRaw.match(/★/g) || []).length || (parseInt(bRaw, 10) || 0), ok: toText(get("ok")), mt: toText(get("mt")), tage: toNum(get("tage")) });
+      b: (bRaw.match(/★/g) || []).length || (parseInt(bRaw, 10) || 0), ok: toText(get("ok")), mt: toText(get("mt")), tage: toNum(get("tage")),
+      gx: cleanGx(parseGxText(toText(get("gx"))), g), lws: toNum(get("lws")), schnee: toText(get("schnee")), huette: toText(get("huette")) });
     else Object.assign(o, { prio: toText(get("prio")), zeit: toText(get("zeit")) });
-    for (const k of Object.keys(o)) if (o[k] === "" || o[k] == null || (o[k] === 0 && (k === "b" || k === "tage"))) delete o[k];
+    for (const k of Object.keys(o)) if (o[k] === "" || o[k] == null || (Array.isArray(o[k]) && !o[k].length) || (o[k] === 0 && (k === "b" || k === "tage" || k === "lws"))) delete o[k];
     out.push(o);
   }
   return out;
@@ -1672,10 +1897,11 @@ $("exportXlsx").addEventListener("click", async () => {
   try {
     const X = await loadXlsx();
     const serial = (iso) => { const [y, m, d] = iso.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
-    const TH = ["Datum", "Sportart", "Gipfel / Ziel", "Route", "Gebirgsgruppe", "Land", "Gipfelhöhe", "Höhenmeter", "Distanz", "Dauer", "Schwierigkeit", "Seillängen", "Partner", "Verhältnisse", "Bewertung", "Gipfel erreicht", "Beschreibung", "Link Route", "Link Track", "Link Fotos", "Koordinaten", "Mehrtagestour", "Tage"];
+    const TH = ["Datum", "Sportart", "Gipfel / Ziel", "Route", "Gebirgsgruppe", "Land", "Gipfelhöhe", "Höhenmeter", "Distanz", "Dauer", "Schwierigkeit", "Seillängen", "Partner", "Verhältnisse", "Bewertung", "Gipfel erreicht", "Beschreibung", "Link Route", "Link Track", "Link Fotos", "Koordinaten", "Mehrtagestour", "Tage", "Weitere Gipfel", "Lawinenwarnstufe", "Schnee", "Hütte"];
     const T = [...tours()].sort((a, b) => String(a.d || "").localeCompare(String(b.d || "")));
     const trows = T.map((t) => [/^\d{4}-\d{2}-\d{2}$/.test(t.d || "") ? serial(t.d) : (t.d || ""), t.s || "", t.g || "", t.r || "", t.geb || "", t.land || "", t.h ?? "", t.hm ?? "", t.km ?? "", t.dur ? durMin(t.dur) / 1440 : "",
-      t.sch || "", t.sl ?? "", t.p || "", t.v || "", +t.b ? "★".repeat(+t.b) : "", t.ok || "", t.txt || "", t.lr || "", t.lt || "", t.lf || "", fmtCoord(t), t.mt || "", t.tage ?? ""]);
+      t.sch || "", t.sl ?? "", t.p || "", t.v || "", +t.b ? "★".repeat(+t.b) : "", t.ok || "", t.txt || "", t.lr || "", t.lt || "", t.lf || "", fmtCoord(t), t.mt || "", t.tage ?? "",
+      (t.gx || []).map((p) => p.g + (p.h ? ` (${p.h} m)` : "")).join("; "), t.lws ?? "", t.schnee || "", t.huette || ""]);
     const ws1 = X.utils.aoa_to_sheet([TH, ...trows]);
     trows.forEach((row, i) => {
       const r = i + 1;
@@ -1683,7 +1909,7 @@ $("exportXlsx").addEventListener("click", async () => {
       const j = ws1[X.utils.encode_cell({ r, c: 9 })]; if (j && j.t === "n") j.z = "[h]:mm";
       for (const c of [17, 18, 19]) { const x = ws1[X.utils.encode_cell({ r, c })]; if (x && x.v) x.l = { Target: String(x.v) }; }
     });
-    ws1["!cols"] = [11, 13, 24, 26, 18, 12, 10, 11, 9, 8, 12, 10, 16, 26, 10, 9, 40, 22, 22, 22, 20, 22, 6].map((w) => ({ wch: w }));
+    ws1["!cols"] = [11, 13, 24, 26, 18, 12, 10, 11, 9, 8, 12, 10, 16, 26, 10, 9, 40, 22, 22, 22, 20, 22, 6, 30, 8, 18, 18].map((w) => ({ wch: w }));
     ws1["!autofilter"] = { ref: ws1["!ref"] };
     const BH = ["Priorität", "Sportart", "Gipfel / Ziel", "Route", "Gebirgsgruppe", "Land", "Gipfelhöhe", "Höhenmeter", "Schwierigkeit", "Seillängen", "Beste Zeit", "Notizen", "Link Route", "Koordinaten", "Status"];
     const brows = bucketItems().map((b) => [b.prio || "", b.s || "", b.g || "", b.r || "", b.geb || "", b.land || "", b.h ?? "", b.hm ?? "", b.sch || "", b.sl ?? "", b.zeit || "", b.txt || "", b.lr || "", fmtCoord(b), bucketDone(b) ? "erledigt" : "offen"]);
@@ -1737,7 +1963,7 @@ $("setupGo").addEventListener("click", async () => {
     if (Array.isArray(saved) && saved.length) {
       gpxItems = saved.map(unpackItem);
       gpxSeq = gpxItems.reduce((m, x) => Math.max(m, parseInt(String(x.id).slice(1), 10) || 0, ...(x.parts || []).map((y) => parseInt(String(y.id).slice(1), 10) || 0)), 0);
-      $("cards").innerHTML = gpxItems.map(cardHtml).join(""); updateGpxSave(); updateMultiBar();
+      renderCards();
     }
   } catch (e) { /* ignore a broken saved list */ }
   updateGpxBadge();
