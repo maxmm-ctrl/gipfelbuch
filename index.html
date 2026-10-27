@@ -829,7 +829,7 @@ function filteredBucket() {
 const keyOf = (o) => `${(+o.lat).toFixed(4)},${(+o.lon).toFixed(4)}`;
 const peakNames = (t) => [t.g, ...(t.gx || []).map((p) => p.g)].filter(Boolean);
 // all summits of the given tours that were reached, with height: [{ n, h, t }]
-const peakList = (list) => list.filter((t) => t.ok !== "Nein").flatMap((t) => [t.g ? { n: t.g, h: +t.h || 0, t } : null, ...(t.gx || []).map((p) => ({ n: p.g, h: +p.h || 0, t }))]).filter((p) => p && p.n);
+const peakList = (list) => list.filter((t) => t.ok !== "Nein" && t.ok !== "–").flatMap((t) => [t.g ? { n: t.g, h: +t.h || 0, t } : null, ...(t.gx || []).map((p) => ({ n: p.g, h: +p.h || 0, t }))]).filter((p) => p && p.n);
 function cleanGx(list, main) {
   const seen = new Set([String(main || "").trim().toLowerCase()]), out = [];
   for (const p of list || []) {
