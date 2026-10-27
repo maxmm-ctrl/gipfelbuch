@@ -141,6 +141,10 @@ details > summary { cursor: pointer; font-weight: 600; font-size: 13.5px; color:
 details > summary::-webkit-details-marker { display: none; }
 details[open] > summary { margin-bottom: 8px; }
 .gv-foot { border-top: 1px solid var(--line); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
+.multi { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--surface); padding: 12px; display: grid; gap: 8px; }
+.multi b { font: 700 16px/1.2 var(--f-display); }
+.mtline { color: var(--muted); font-size: 13px; }
+.mtline a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .howto { background: var(--chip); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; display: grid; gap: 4px; }
 .howto b { font-weight: 600; }
 #copyFallback { font-family: ui-monospace, Menlo, monospace; font-size: 12px; min-height: 80px; }
@@ -212,6 +216,7 @@ details[open] > summary { margin-bottom: 8px; }
           <select id="year" aria-label="Jahr"></select>
           <select id="land" aria-label="Land"></select>
         </div>
+        <select id="mt" aria-label="Mehrtagestour" hidden></select>
         <input id="q" type="search" placeholder="Suche: Gipfel, Route, Partner …" aria-label="Suche">
         <label class="switch"><input id="showBucket" type="checkbox" checked> Bucketlist auf der Karte</label>
       </div>
@@ -242,6 +247,15 @@ details[open] > summary { margin-bottom: 8px; }
           <span>Eine oder mehrere Dateien, z. B. aus der Suunto-App exportiert. Am Computer auch per Drag &amp; Drop.</span>
         </label>
         <input id="gpxFile" type="file" multiple hidden>
+        <div class="multi" id="multiBar" hidden>
+          <b id="multiTitle">Mehrere Touren gewählt</b>
+          <label class="field" for="mtName"><span>Name der Mehrtagestour</span><input id="mtName" type="text" placeholder="z. B. Dachstein-Wochenende"></label>
+          <div class="btns">
+            <button class="btn grow" id="linkBtn" type="button">Als Mehrtagestour verknüpfen</button>
+            <button class="btn grow" id="mergeBtn" type="button">Zu einer Zeile zusammenführen</button>
+          </div>
+          <div class="note"><b style="font:inherit;font-weight:600">Verknüpfen:</b> jede Datei bleibt eine eigene Zeile mit eigenem Gipfel, alle bekommen denselben Namen. <b style="font:inherit;font-weight:600">Zusammenführen:</b> eine Zeile für die ganze Tour, Höhenmeter, Distanz und Zeit werden addiert, »Tage« wird gesetzt.</div>
+        </div>
         <div id="cards" style="display:grid;gap:12px"></div>
       </div>
       <div class="gv-foot pad">
@@ -253,7 +267,8 @@ details[open] > summary { margin-bottom: 8px; }
         <button class="btn primary" id="copyBtn" type="button" disabled>Zeile kopieren</button>
         <div class="howto" id="howto" hidden>
           <b>Kopiert. So geht's weiter in Excel:</b>
-          <span>Tourenbuch öffnen → Zelle in <b>Spalte A</b> der ersten freien Zeile direkt unter der Tabelle antippen → <b>Einfügen</b>. Danach hier »Excel laden«, damit die Karte den neuen Stand zeigt.</span>
+          <span>Tourenbuch öffnen → Zelle in <b>Spalte A</b> der ersten freien Zeile direkt unter der Tabelle antippen → <b>Einfügen</b>. Alle kopierten Touren landen untereinander. Danach hier »Excel laden«, damit die Karte den neuen Stand zeigt.</span>
+          <div class="btns"><button class="btn" id="clearCopied" type="button">Übertragene aus der Liste entfernen</button></div>
         </div>
         <textarea id="copyFallback" readonly hidden aria-label="Excel-Zeilen zum Kopieren"></textarea>
         <div class="status" id="gpxStatus"></div>
@@ -278,7 +293,7 @@ const SPORT_COLORS = {
 };
 const SPORT_ORDER = Object.keys(SPORT_COLORS);
 const FALLBACK = ["#4F6D7A", "#9C6644", "#6A994E", "#B56576", "#3D5A80", "#E07A5F", "#81B29A"];
-const LS_DATA = "gipfelbuch-data-v1", LS_BASE = "gipfelbuch-base", LS_FMT = "gipfelbuch-fmt";
+const LS_DATA = "gipfelbuch-data-v1", LS_BASE = "gipfelbuch-base", LS_FMT = "gipfelbuch-fmt", LS_GPX = "gipfelbuch-gpx-v1";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -299,7 +314,7 @@ const readFile = (file, asText) => new Promise((res, rej) => {
   asText ? fr.readAsText(file) : fr.readAsArrayBuffer(file);
 });
 
-const state = { tours: [], bucket: [], meta: null, sportsOff: new Set(), year: "", land: "", q: "", showBucket: true, tab: "tours" };
+const state = { tours: [], bucket: [], meta: null, sportsOff: new Set(), year: "", land: "", mt: "", q: "", showBucket: true, tab: "tours" };
 
 /* ===================== map ===================== */
 const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende';
@@ -354,6 +369,7 @@ const ptsR = L.canvas({ pane: "pts", padding: 0.4, tolerance: 6 });
 const tourLayer = L.layerGroup().addTo(map);
 const bucketLayer = L.layerGroup().addTo(map);
 const previewLayer = L.layerGroup().addTo(map);
+const stageLayer = L.layerGroup().addTo(map);
 let markerIndex = new Map();
 const syncLabels = () => $("map").classList.toggle("labels", map.getZoom() >= 12);
 map.on("zoomend", syncLabels); syncLabels();
@@ -365,7 +381,8 @@ function filteredTours() {
     if (state.sportsOff.has(t.s || "–")) return false;
     if (state.year && String(t.d || "").slice(0, 4) !== state.year) return false;
     if (state.land && (t.land || "") !== state.land) return false;
-    if (q && ![t.g, t.r, t.p, t.geb, t.land, t.txt, t.s, t.v].join(" ").toLowerCase().includes(q)) return false;
+    if (state.mt && (t.mt || "") !== state.mt) return false;
+    if (q && ![t.g, t.r, t.p, t.geb, t.land, t.txt, t.s, t.v, t.mt].join(" ").toLowerCase().includes(q)) return false;
     return true;
   });
 }
@@ -377,7 +394,7 @@ function bucketDone(b) {
 function filteredBucket() {
   const q = state.q.trim().toLowerCase();
   return state.bucket.filter((b) => {
-    if (bucketDone(b)) return false;
+    if (bucketDone(b) || state.mt) return false;
     if (state.sportsOff.has(b.s || "–")) return false;
     if (state.land && (b.land || "") !== state.land) return false;
     if (q && ![b.g, b.r, b.geb, b.land, b.txt, b.s].join(" ").toLowerCase().includes(q)) return false;
@@ -416,6 +433,12 @@ function renderControls() {
   const lands = [...new Set([...state.tours, ...state.bucket].map((t) => t.land).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
   if (state.land && !lands.includes(state.land)) state.land = "";
   $("land").innerHTML = `<option value="">Alle Länder</option>` + lands.map((l) => `<option${l === state.land ? " selected" : ""}>${esc(l)}</option>`).join("");
+  const mts = {};
+  for (const t of state.tours) if (t.mt) mts[t.mt] = (mts[t.mt] || 0) + 1;
+  const mtNames = Object.keys(mts).sort((a, b) => a.localeCompare(b, "de"));
+  if (state.mt && !mtNames.includes(state.mt)) state.mt = "";
+  $("mt").hidden = !mtNames.length;
+  $("mt").innerHTML = `<option value="">Mehrtagestour: alle Touren</option>` + mtNames.map((n) => `<option value="${esc(n)}"${n === state.mt ? " selected" : ""}>${esc(n)} (${mts[n]})</option>`).join("");
   $("tabTours").textContent = `Touren (${state.tours.length})`;
   $("tabBucket").textContent = `Bucketlist (${state.bucket.filter((b) => !bucketDone(b)).length})`;
 }
@@ -423,11 +446,21 @@ function renderStats(tours) {
   const peaks = new Set(tours.filter((t) => t.ok !== "Nein").map((t) => (t.g || "").toLowerCase()).filter(Boolean));
   const hm = tours.reduce((a, t) => a + (+t.hm || 0), 0);
   const km = tours.reduce((a, t) => a + (+t.km || 0), 0);
+  const days = new Set(tours.map((t) => t.d).filter(Boolean)).size + tours.reduce((a, t) => a + Math.max(0, (+t.tage || 1) - 1), 0);
   $("stats").innerHTML = `<span><b>${nf.format(tours.length)}</b> Touren</span><span><b>${nf.format(peaks.size)}</b> Gipfel</span>` +
+    (days ? `<span><b>${nf.format(days)}</b> Tage</span>` : "") +
     `<span><b>${nf.format(Math.round(hm))}</b> Hm</span>` + (km ? `<span><b>${nf.format(Math.round(km))}</b> km</span>` : "");
 }
 function renderMarkers(tours, bucket) {
-  tourLayer.clearLayers(); bucketLayer.clearLayers(); markerIndex = new Map();
+  tourLayer.clearLayers(); bucketLayer.clearLayers(); stageLayer.clearLayers(); markerIndex = new Map();
+  const stages = {};
+  for (const t of tours) if (t.mt && isFinite(t.lat) && isFinite(t.lon)) (stages[t.mt] = stages[t.mt] || []).push(t);
+  for (const list of Object.values(stages)) {
+    list.sort((a, b) => String(a.d || "").localeCompare(String(b.d || "")));
+    const ll = [];
+    for (const t of list) { const p = [t.lat, t.lon]; const last = ll[ll.length - 1]; if (!last || last[0] !== p[0] || last[1] !== p[1]) ll.push(p); }
+    if (ll.length > 1) stageLayer.addLayer(L.polyline(ll, { color: "#24364A", weight: 3, opacity: 0.85, dashArray: "2 7", lineCap: "round", interactive: false }));
+  }
   const groups = new Map();
   for (const t of tours) {
     if (!isFinite(t.lat) || !isFinite(t.lon)) continue;
@@ -471,8 +504,9 @@ function tourPopup(visits) {
   const head = [t.h ? nf.format(t.h) + " m" : "", t.geb, t.land].filter(Boolean).join(" · ");
   let html = `<div class="pp"><h3>${esc(t.g || t.r || "Ohne Namen")}</h3><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
   for (const v of visits) {
-    const facts = [v.sch && `Grad ${v.sch}`, v.sl && `${v.sl} SL`, v.hm && `${nf.format(v.hm)} Hm`, v.km && `${nf1.format(v.km)} km`, v.dur && `${v.dur} h`].filter(Boolean).join(" · ");
+    const facts = [+v.tage > 1 && `${v.tage} Tage`, v.sch && `Grad ${v.sch}`, v.sl && `${v.sl} SL`, v.hm && `${nf.format(v.hm)} Hm`, v.km && `${nf1.format(v.km)} km`, v.dur && `${v.dur} h`].filter(Boolean).join(" · ");
     html += `<div class="visit">
+      ${v.mt ? stageLine(v) : ""}
       <div class="vhead"><span>${esc(fmtDate(v.d))}</span><span class="tag" style="--c:${colorFor(v.s)}">${esc(v.s || "–")}</span>${stars(v.b)}${v.ok === "Nein" ? '<span class="pill no">Umkehr</span>' : ""}</div>
       ${v.r ? `<div class="vroute">${esc(v.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
       ${v.p ? `<div class="vfacts">mit ${esc(v.p)}</div>` : ""}${v.v ? `<div class="vfacts">${esc(v.v)}</div>` : ""}
@@ -481,6 +515,17 @@ function tourPopup(visits) {
   }
   return html + mapLinks(t) + "</div>";
 }
+function stageLine(v) {
+  const dates = [...new Set(state.tours.filter((t) => t.mt === v.mt).map((t) => t.d).filter(Boolean))].sort();
+  const i = dates.indexOf(v.d);
+  return `<div class="mtline">↔ <a href="#" data-mt="${esc(v.mt)}">${esc(v.mt)}</a>${i >= 0 && dates.length > 1 ? ` · Tag ${i + 1} von ${dates.length}` : ""}</div>`;
+}
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-mt]"); if (!a) return;
+  e.preventDefault();
+  state.mt = a.dataset.mt; map.closePopup(); render(); fitAll();
+});
+$("mt").addEventListener("change", (e) => { state.mt = e.target.value; render(); if (state.mt) fitAll(); });
 function bucketPopup(b) {
   const head = [b.h ? nf.format(b.h) + " m" : "", b.geb, b.land].filter(Boolean).join(" · ");
   const facts = [b.sch && `Grad ${b.sch}`, b.sl && `${b.sl} SL`, b.hm && `${nf.format(b.hm)} Hm`, b.zeit && `Beste Zeit: ${b.zeit}`].filter(Boolean).join(" · ");
@@ -505,7 +550,7 @@ function renderList(tours, bucket) {
     for (const t of sorted) {
       const y = String(t.d || "").slice(0, 4) || "Ohne Datum";
       if (y !== cur) { cur = y; html += `<div class="year">${esc(y)}<span>${byYear[y].length} Touren · ${nf.format(byYear[y].reduce((a, x) => a + (+x.hm || 0), 0))} Hm</span></div>`; }
-      const meta = [fmtDate(t.d), t.s, t.r, t.sch].filter(Boolean).join(" · ") + (!isFinite(t.lat) ? " · ohne Koordinaten" : "");
+      const meta = [fmtDate(t.d), +t.tage > 1 && `${t.tage} Tage`, t.s, t.r, t.sch, t.mt && `↔ ${t.mt}`].filter(Boolean).join(" · ") + (!isFinite(t.lat) ? " · ohne Koordinaten" : "");
       html += `<button type="button" class="item${t.ok === "Nein" ? " turned" : ""}" data-id="${t._id}" style="--c:${colorFor(t.s)}">
         <span class="dot"></span><span class="t">${esc(t.g || t.r || "Ohne Namen")}</span><span class="r">${t.hm ? nf.format(t.hm) + " Hm" : ""}</span>
         <span class="meta">${esc(meta)}</span></button>`;
@@ -597,7 +642,8 @@ const ALIAS = {
   v: ["verhaltnisse", "wetter", "verhaltnissewetter", "bedingungen"], b: ["bewertung", "sterne"], ok: ["gipfelerreicht", "erreicht"],
   txt: ["beschreibung", "notizen", "notiz", "kommentar"], coord: ["koordinaten", "koordinate", "coords", "position"],
   lat: ["breite", "lat", "latitude", "breitengrad"], lon: ["lange", "lon", "lng", "longitude", "langengrad"],
-  prio: ["prioritat", "prio"], zeit: ["bestezeit", "saison"]
+  prio: ["prioritat", "prio"], zeit: ["bestezeit", "saison"], mt: ["mehrtagestour", "mehrtagestouren", "tourgruppe", "gruppe"],
+  tage: ["tage", "anzahltage"]
 };
 function headerMap(row) {
   const m = {}, links = [];
@@ -679,7 +725,7 @@ function readSheet(ws, X, kind) {
     const o = { s: toText(get("s")), g, r: rt, geb: toText(get("geb")), land: toText(get("land")), h: toNum(get("h")), hm: toNum(get("hm")),
       sch: toText(get("sch")), sl: toNum(get("sl")), txt: toText(get("txt")), links, lat: pos ? pos.lat : null, lon: pos ? pos.lon : null };
     if (kind === "tours") Object.assign(o, { d: toIsoDate(get("d"), X), km: toNum(get("km")), dur: toDur(get("dur")), p: toText(get("p")), v: toText(get("v")),
-      b: (bRaw.match(/★/g) || []).length || (parseInt(bRaw, 10) || 0), ok: toText(get("ok")) });
+      b: (bRaw.match(/★/g) || []).length || (parseInt(bRaw, 10) || 0), ok: toText(get("ok")), mt: toText(get("mt")), tage: toNum(get("tage")) });
     else Object.assign(o, { prio: toText(get("prio")), zeit: toText(get("zeit")) });
     for (const k of Object.keys(o)) if (o[k] === "" || o[k] == null || (Array.isArray(o[k]) && !o[k].length)) delete o[k];
     out.push(o);
@@ -718,7 +764,7 @@ function applyData(tours, bucket, meta) {
 }
 
 /* ===================== GPX ===================== */
-const GPX_COLS = ["d", "s", "g", "r", "geb", "land", "h", "hm", "km", "dur", "sch", "sl", "p", "v", "b", "ok", "txt", "lr", "lt", "lf", "coord"];
+const GPX_COLS = ["d", "s", "g", "r", "geb", "land", "h", "hm", "km", "dur", "sch", "sl", "p", "v", "b", "ok", "txt", "lr", "lt", "lf", "coord", "mt", "tage"];
 let gpxItems = [];
 let lookupQueue = Promise.resolve();
 
@@ -843,7 +889,7 @@ async function addGpxFiles(files) {
       const item = {
         id: "g" + (++gpxSeq), file: f.name, take: true, pts, a, peaks: [], lookup: "wartet",
         d: a.d, s: guessSport(type, name, f.name), g: "", r: "", geb: "", land: "", h: a.top && a.top.ele != null ? a.top.ele : "",
-        hm: a.hm ?? "", km: a.km || "", dur: a.dur, sch: "", sl: "", p: "", v: "", b: "", ok: "Ja", txt: "", lr: "", lt: "", lf: "",
+        hm: a.hm ?? "", km: a.km || "", dur: a.dur, sch: "", sl: "", p: "", v: "", b: "", ok: "Ja", txt: "", lr: "", lt: "", lf: "", mt: "", tage: "",
         coord: a.top ? `${a.top.lat.toFixed(5)}, ${a.top.lon.toFixed(5)}` : ""
       };
       item.dup = a.d ? state.tours.filter((t) => t.d === a.d).map((t) => t.g || t.r).filter(Boolean) : [];
@@ -885,10 +931,10 @@ function queueLookup(item) {
 
 const FIELD_DEFS = [
   ["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak"], ["h", "Gipfelhöhe (m)", "num"], ["r", "Route", "text"],
-  ["land", "Land", "text"], ["geb", "Gebirgsgruppe", "text"]
+  ["land", "Land", "text"], ["geb", "Gebirgsgruppe", "text"], ["mt", "Mehrtagestour (Name)", "mt"]
 ];
 const MORE_DEFS = [
-  ["d", "Datum", "date"], ["dur", "Dauer (h:mm)", "text"], ["hm", "Höhenmeter", "num"], ["km", "Distanz (km)", "num"],
+  ["d", "Datum (erster Tag)", "date"], ["tage", "Tage", "num"], ["dur", "Dauer (h:mm)", "text"], ["hm", "Höhenmeter", "num"], ["km", "Distanz (km)", "num"],
   ["sch", "Schwierigkeit", "text"], ["sl", "Seillängen", "num"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"],
   ["ok", "Gipfel erreicht", "ok"], ["v", "Verhältnisse / Wetter", "text"], ["txt", "Beschreibung", "area"],
   ["lt", "Link Track (Suunto, Strava …)", "url"], ["lr", "Link Routenbeschreibung", "url"], ["lf", "Link Fotos", "url"], ["coord", "Koordinaten", "text"]
@@ -901,6 +947,10 @@ function fieldHtml(it, [k, label, type]) {
   else if (type === "ok") input = `<select id="${id}" data-k="${k}">${["Ja", "Nein", "–"].map((o) => `<option${o === v ? " selected" : ""}>${o}</option>`).join("")}</select>`;
   else if (type === "area") input = `<textarea id="${id}" data-k="${k}" rows="2">${esc(v)}</textarea>`;
   else if (type === "peak") input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(v)}" autocomplete="off"><datalist id="${id}-dl">${it.peaks.map((p) => `<option value="${esc(p.name)}">${p.ele ? nf.format(p.ele) + " m · " : ""}${Math.round(p.dist)} m entfernt</option>`).join("")}</datalist>`;
+  else if (type === "mt") {
+    const names = [...new Set([...state.tours.map((t) => t.mt), ...gpxItems.map((x) => x.mt)].filter(Boolean))];
+    input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(v)}" placeholder="nur bei mehrtägigen Touren" autocomplete="off"><datalist id="${id}-dl">${names.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>`;
+  }
   else if (type === "date") input = `<input id="${id}" data-k="${k}" type="date" value="${esc(v)}">`;
   else if (type === "num") input = `<input id="${id}" data-k="${k}" type="text" inputmode="decimal" value="${esc(v === "" ? "" : String(v).replace(".", ","))}">`;
   else input = `<input id="${id}" data-k="${k}" type="${type === "url" ? "url" : "text"}" value="${esc(v)}"${type === "url" ? ' placeholder="https://…"' : ""}>`;
@@ -909,6 +959,7 @@ function fieldHtml(it, [k, label, type]) {
 function cardHtml(it) {
   const a = it.a;
   const facts = [
+    a.days > 1 ? `<span><b>${fmtDate(a.d)} – ${fmtDate(a.dEnd)}</b> · ${a.days} Tage</span>` :
     a.d && `<span><b>${fmtDate(a.d)}</b>${a.startTime ? " · Start " + a.startTime : ""}</span>`,
     a.dur && `<span><b>${a.dur}</b> h</span>`,
     a.km ? `<span><b>${nf1.format(a.km)}</b> km</span>` : "",
@@ -920,7 +971,9 @@ function cardHtml(it) {
     <div class="card-top"><span class="fname" title="${esc(it.file)}">${esc(it.file)}</span>
       <label><input type="checkbox" data-take${it.take ? " checked" : ""}> übernehmen</label>
       <button class="iconbtn" type="button" data-remove aria-label="Entfernen" style="width:30px;height:30px;font-size:15px">×</button></div>
+    ${it.parts ? `<div class="note">Aus ${it.parts.length} Dateien: ${esc(it.parts.map((x) => x.file).join(", "))} · <a href="#" data-split style="color:var(--accent);font-weight:600">Wieder trennen</a></div>` : ""}
     <div class="facts">${facts || '<span class="note">Keine Zeit- oder Höhendaten im Track.</span>'}</div>
+    ${it.copied ? `<div class="note" style="color:var(--ok)">✓ Am ${new Date(it.copied).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })} in die Zwischenablage kopiert. Zum erneuten Kopieren wieder anhaken.</div>` : ""}
     ${it.dup.length ? `<div class="note warn">Am ${fmtDate(it.d)} steht schon im Gipfelbuch: ${esc(it.dup.join(", "))}. Deshalb nicht angehakt.</div>` : ""}
     <div class="note" data-note>${esc(note)}</div>
     <div class="fields">${FIELD_DEFS.map((f) => fieldHtml(it, f)).join("")}</div>
@@ -929,6 +982,7 @@ function cardHtml(it) {
 }
 function renderCards() {
   $("cards").innerHTML = gpxItems.map(cardHtml).join("");
+  updateMultiBar(); saveGpx();
   $("drop").querySelector("b").textContent = gpxItems.length ? "Weitere GPX-Datei hinzufügen" : "GPX-Datei wählen";
   updateCopyBtn();
 }
@@ -941,7 +995,7 @@ function refreshCard(it) {
     const inp = el.querySelector(`[data-k="${k}"]`);
     if (inp && document.activeElement !== inp && inp.value !== String(it[k] ?? "")) inp.value = k === "h" ? String(it[k] ?? "").replace(".", ",") : (it[k] ?? "");
   }
-  drawPreview(true);
+  drawPreview(true); saveGpx();
 }
 function updateLookupNote(it) {
   const n = document.querySelector(`.card[data-id="${it.id}"] [data-note]`);
@@ -961,18 +1015,84 @@ $("cards").addEventListener("input", (e) => {
     }
   }
   if (k === "coord" || k === "s") drawPreview(true);
+  saveGpx();
 });
 $("cards").addEventListener("change", (e) => {
   const card = e.target.closest(".card"); if (!card) return;
   const it = gpxItems.find((x) => x.id === card.dataset.id); if (!it) return;
-  if (e.target.matches("[data-take]")) { it.take = e.target.checked; card.classList.toggle("off", !it.take); updateCopyBtn(); }
+  if (e.target.matches("[data-take]")) { it.take = e.target.checked; card.classList.toggle("off", !it.take); updateCopyBtn(); updateMultiBar(); drawPreview(true); }
   else if (e.target.dataset.k) it[e.target.dataset.k] = e.target.value;
+  saveGpx();
 });
 $("cards").addEventListener("click", (e) => {
+  if (e.target.closest("[data-split]")) {
+    e.preventDefault();
+    const card = e.target.closest(".card"), it = gpxItems.find((x) => x.id === card.dataset.id);
+    if (it && it.parts) { gpxItems.splice(gpxItems.indexOf(it), 1, ...it.parts.map((x) => ({ ...x, take: true }))); renderCards(); drawPreview(true); }
+    return;
+  }
   if (!e.target.closest("[data-remove]")) return;
   const card = e.target.closest(".card");
   gpxItems = gpxItems.filter((x) => x.id !== card.dataset.id);
   renderCards(); drawPreview();
+});
+function selected() { return gpxItems.filter((x) => x.take).sort((a, b) => String(a.d).localeCompare(String(b.d)) || ((a.pts[0] || {}).t || 0) - ((b.pts[0] || {}).t || 0)); }
+function updateMultiBar() {
+  const sel = selected();
+  $("multiBar").hidden = sel.length < 2;
+  $("multiTitle").textContent = `${sel.length} Touren angehakt – mehrtägig?`;
+  if (sel.length >= 2 && !$("mtName").value) {
+    const ds = sel.map((x) => x.d).filter(Boolean).sort();
+    const where = sel.map((x) => x.geb || x.g).find(Boolean) || "Mehrtagestour";
+    $("mtName").placeholder = ds.length ? `z. B. ${where} ${fmtDate(ds[0]).slice(0, 6)}–${fmtDate(ds[ds.length - 1])}` : "z. B. Dachstein-Wochenende";
+  }
+}
+function mtNameOrSuggest() {
+  const v = $("mtName").value.trim();
+  if (v) return v;
+  const ph = $("mtName").placeholder.replace(/^z\. B\. /, "");
+  return ph;
+}
+$("linkBtn").addEventListener("click", () => {
+  const sel = selected(); if (sel.length < 2) return;
+  const name = mtNameOrSuggest();
+  for (const it of sel) it.mt = name;
+  $("mtName").value = name;
+  renderCards();
+  toast(`${sel.length} Touren als »${name}« verknüpft. Jede bleibt eine eigene Zeile.`);
+});
+$("mergeBtn").addEventListener("click", () => {
+  const sel = selected(); if (sel.length < 2) return;
+  const parts = sel.map((x) => x.parts ? x.parts : [x]).flat();
+  const mins = (s) => { const m = /^(\d+):(\d{2})$/.exec(String(s || "")); return m ? +m[1] * 60 + +m[2] : 0; };
+  const sum = (k) => parts.reduce((a, x) => a + (parseFloat(String(x[k] ?? "").replace(",", ".")) || 0), 0);
+  const tops = parts.filter((x) => x.a.top && x.a.top.ele != null).sort((a, b) => b.a.top.ele - a.a.top.ele);
+  const hi = tops[0] || parts[0];
+  const dates = [...new Set(parts.map((x) => x.d).filter(Boolean))].sort();
+  const totMin = parts.reduce((a, x) => a + mins(x.dur), 0);
+  const firstOf = (k) => (parts.find((x) => x[k]) || {})[k] || "";
+  const a = {
+    d: dates[0] || "", dEnd: dates[dates.length - 1] || "", days: dates.length, startTime: parts[0].a.startTime,
+    dur: totMin ? `${Math.floor(totMin / 60)}:${String(totMin % 60).padStart(2, "0")}` : "",
+    km: Math.round(sum("km") * 10) / 10, hm: parts.some((x) => x.hm !== "" && x.hm != null) ? Math.round(sum("hm")) : null,
+    top: hi.a.top
+  };
+  const merged = {
+    id: "g" + (++gpxSeq), file: `${parts.length} Dateien zusammengeführt`, take: true, parts: parts.map((x) => ({ ...x, take: true })),
+    pts: parts.flatMap((x) => x.pts), a, peaks: hi.peaks || [], lookup: "fertig", peakNote: hi.peakNote || "",
+    d: a.d, s: firstOf("s"), g: hi.g || firstOf("g"), r: [...new Set(parts.map((x) => x.r).filter(Boolean))].join(" / "),
+    geb: firstOf("geb"), land: hi.land || firstOf("land"), h: hi.h, hm: a.hm ?? "", km: a.km || "", dur: a.dur,
+    sch: firstOf("sch"), sl: firstOf("sl"), p: firstOf("p"), v: [...new Set(parts.map((x) => x.v).filter(Boolean))].join(" / "),
+    b: firstOf("b"), ok: parts.some((x) => x.ok === "Ja") ? "Ja" : firstOf("ok") || "Ja", txt: parts.map((x) => x.txt).filter(Boolean).join(" "),
+    lr: firstOf("lr"), lt: firstOf("lt"), lf: firstOf("lf"), coord: hi.coord, mt: $("mtName").value.trim(), tage: dates.length > 1 ? dates.length : ""
+  };
+  merged.dup = merged.d ? state.tours.filter((t) => t.d === merged.d).map((t) => t.g || t.r).filter(Boolean) : [];
+  if (merged.dup.length) merged.take = false;
+  const at = gpxItems.indexOf(sel[0]);
+  gpxItems = gpxItems.filter((x) => !sel.includes(x));
+  gpxItems.splice(Math.max(0, at), 0, merged);
+  renderCards(); drawPreview(true);
+  toast(`Zu einer Zeile zusammengeführt${dates.length > 1 ? ` (${dates.length} Tage)` : ""}.`);
 });
 function updateCopyBtn() {
   const n = gpxItems.filter((x) => x.take).length;
@@ -1008,7 +1128,7 @@ function cellValue(it, k, fmt) {
   };
   switch (k) {
     case "d": if (!it.d) return ""; return fmt === "de" ? fmtDate(it.d) : it.d;
-    case "h": case "hm": case "sl": return num(it[k], false);
+    case "h": case "hm": case "sl": case "tage": return num(it[k], false);
     case "km": return num(it.km, true);
     case "b": return +it.b ? "★".repeat(+it.b) : "";
     case "coord": { const c = parseCoord(it.coord); return c ? `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}` : clean(it.coord); }
@@ -1032,9 +1152,40 @@ $("copyBtn").addEventListener("click", async () => {
     try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
     if (!ok) { gpxStatus("Kopieren ging nicht automatisch: Text im Feld markieren und kopieren.", true); return; }
   }
+  const now = new Date().toISOString();
+  for (const it of items) { it.copied = now; it.take = false; }
+  renderCards(); drawPreview(true);
   gpxStatus(""); $("howto").hidden = false;
   toast(items.length > 1 ? `${items.length} Zeilen kopiert.` : "Zeile kopiert.");
 });
+$("clearCopied").addEventListener("click", () => {
+  const n = gpxItems.filter((x) => x.copied).length;
+  gpxItems = gpxItems.filter((x) => !x.copied);
+  renderCards(); drawPreview(true);
+  toast(n === 1 ? "1 Tour aus der Liste entfernt." : `${n} Touren aus der Liste entfernt.`);
+});
+
+/* ---- keep the GPX list on this device ---- */
+const thinPts = (pts) => {
+  const step = Math.max(1, Math.ceil(pts.length / 600));
+  const out = pts.filter((_, i) => i % step === 0);
+  if (pts.length && out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]);
+  return out.map((p) => [Math.round(p.lat * 1e5) / 1e5, Math.round(p.lon * 1e5) / 1e5]);
+};
+const packItem = (x) => ({ ...x, pts: thinPts(x.pts), parts: x.parts ? x.parts.map(packItem) : undefined });
+const unpackItem = (x) => ({ ...x, pts: (x.pts || []).map((p) => Array.isArray(p) ? { lat: p[0], lon: p[1] } : p), parts: x.parts ? x.parts.map(unpackItem) : undefined, lookup: "fertig" });
+let gpxSaveT;
+function saveGpx() {
+  clearTimeout(gpxSaveT);
+  gpxSaveT = setTimeout(() => {
+    if (!lsSet(LS_GPX, JSON.stringify(gpxItems.map(packItem)))) gpxStatus("Die GPX-Liste ist zu groß zum Merken. Sie bleibt nur, bis du die Seite schließt.", true);
+    updateGpxBadge();
+  }, 250);
+}
+function updateGpxBadge() {
+  const open = gpxItems.filter((x) => !x.copied).length;
+  $("gpxBtn").textContent = open ? `GPX-Liste (${open} offen)` : "Neue Tour aus GPX";
+}
 
 /* ===================== boot ===================== */
 (function boot() {
@@ -1049,6 +1200,15 @@ $("copyBtn").addEventListener("click", async () => {
   } else {
     render(); setStatus("Noch keine Excel geladen.");
   }
+  try {
+    const saved = JSON.parse(lsGet(LS_GPX) || "[]");
+    if (Array.isArray(saved) && saved.length) {
+      gpxItems = saved.map(unpackItem);
+      gpxSeq = gpxItems.reduce((m, x) => Math.max(m, parseInt(String(x.id).slice(1), 10) || 0, ...(x.parts || []).map((y) => parseInt(String(y.id).slice(1), 10) || 0)), 0);
+      renderCards();
+    }
+  } catch (e) { /* ignore a broken saved list */ }
+  updateGpxBadge();
 })();
 window.__gipfelbuch = { parseGpx, analyzeTrack, toTsv, parseCoord, guessSport, state };
 })();

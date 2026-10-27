@@ -8,6 +8,8 @@ Persönliche Karte zum Excel-Gipfelbuch: alle Touren und Bucketlist-Ziele auf ei
 
 - **Excel laden:** Gipfelbuch-Datei wählen (am iPhone über die Dateien-App, z. B. OneDrive). Jedes Gerät merkt sich den zuletzt geladenen Stand.
 - **Neue Tour aus GPX:** GPX-Datei wählen → die Seite berechnet Datum, Dauer, Distanz, Höhenmeter und den höchsten Punkt und schlägt den Gipfel vor → Sportart ergänzen → »Zeile kopieren« → in Excel im Tourenbuch Spalte A der ersten freien Zeile unter der Tabelle anklicken → Einfügen.
+- **Mehrere Touren auf einmal:** beliebig viele GPX-Dateien in die Liste laden (auch über mehrere Tage, die Liste bleibt auf dem Gerät gespeichert). »Zeilen kopieren« überträgt alle angehakten Touren in einem Rutsch.
+- **Mehrtagestouren:** mehrere angehakte GPX entweder »Als Mehrtagestour verknüpfen« (jede Etappe eine Zeile, gemeinsamer Name, auf der Karte verbunden) oder »Zu einer Zeile zusammenführen« (Höhenmeter, Distanz und Zeit addiert, Spalte »Tage« gesetzt).
 - **Kartenarten:** Ebenen-Symbol rechts oben (OpenTopoMap, OpenHikingMap, swisstopo, Satellit).
 
 ## Kartendaten
