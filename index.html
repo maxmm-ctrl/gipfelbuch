@@ -465,7 +465,8 @@ const EXTRA = {
   huette: ["Hochtour", "Skihochtour", "Wandern"]
 };
 const LWS = ["", "gering", "mäßig", "erheblich", "groß", "sehr groß"];
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+// public Overpass servers are often busy: try them one after another
+const OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
 const LS = { theme: "gb-theme", token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2", maph: "gb-maph" };
 const DEFAULT_REPO = "maxmm-ctrl/gipfelbuch-daten";
 const FILE = "gipfelbuch.json";
@@ -1400,23 +1401,37 @@ function guessSport(...txt) {
   for (const [re, sp] of rules) if (re.test(s)) return sp;
   return "";
 }
-async function fetchJson(url, opts) {
-  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 20000);
+async function fetchJson(url, opts, ms = 20000) {
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), ms);
   try { const r = await fetch(url, { ...opts, signal: ctl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
   finally { clearTimeout(tm); }
 }
-// all named summits around the track, with their distance to the track and to the highest point
+async function overpass(q) {
+  let last = null;
+  for (const url of OVERPASS_URLS) {
+    try {
+      const d = await fetchJson(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } }, 25000);
+      if (d && d.remark && /error|timed out|runtime/i.test(d.remark) && !(d.elements || []).length) throw new Error(d.remark);
+      return d;
+    } catch (e) { last = e; }
+  }
+  throw last || new Error("Overpass nicht erreichbar");
+}
+const eleOf = (v) => v ? Math.round(parseFloat(String(v).replace(",", "."))) || null : null;
+// named summits near the highest point and along the track, with distance to the track and to the highest point
 async function trackPeaks(pts, top) {
-  let s = 90, w = 180, n = -90, e = -180;
-  for (const p of pts) { if (p.lat < s) s = p.lat; if (p.lat > n) n = p.lat; if (p.lon < w) w = p.lon; if (p.lon > e) e = p.lon; }
-  const pad = 0.015;
-  const q = `[out:json][timeout:25];node["natural"~"^(peak|volcano)$"]["name"](${(s - pad).toFixed(5)},${(w - pad).toFixed(5)},${(n + pad).toFixed(5)},${(e + pad).toFixed(5)});out body;`;
-  const data = await fetchJson(OVERPASS, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-  const step = Math.max(1, Math.ceil(pts.length / 3000));
-  const tp = pts.filter((_, i) => i % step === 0);
-  const cosLat = Math.cos(((s + n) / 2) * Math.PI / 180);
-  return (data.elements || []).filter((el) => el.tags && el.tags.name).map((el) => {
-    const pk = { name: el.tags.name, ele: el.tags.ele ? Math.round(parseFloat(String(el.tags.ele).replace(",", "."))) || null : null, lat: el.lat, lon: el.lon };
+  const step = Math.max(1, Math.ceil(pts.length / 150));
+  const line = pts.filter((_, i) => i % step === 0);
+  if (line[line.length - 1] !== pts[pts.length - 1]) line.push(pts[pts.length - 1]);
+  const sel = 'node["natural"~"^(peak|volcano)$"]["name"]';
+  const q = `[out:json][timeout:25];(${top ? `${sel}(around:1500,${top.lat.toFixed(5)},${top.lon.toFixed(5)});` : ""}${sel}(around:300,${line.map((p) => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(",")}););out body;`;
+  const data = await overpass(q);
+  const tstep = Math.max(1, Math.ceil(pts.length / 3000));
+  const tp = pts.filter((_, i) => i % tstep === 0);
+  const cosLat = Math.cos((tp.reduce((a, p) => a + p.lat, 0) / tp.length) * Math.PI / 180);
+  const seen = new Set();
+  return (data.elements || []).filter((el) => { const k = el.id != null ? el.id : `${el.lat},${el.lon}`; if (!el.tags || !el.tags.name || seen.has(k)) return false; seen.add(k); return true; }).map((el) => {
+    const pk = { name: el.tags.name, ele: eleOf(el.tags.ele), lat: el.lat, lon: el.lon };
     let best = Infinity, bi = 0;
     for (let i = 0; i < tp.length; i++) {
       const dx = (tp[i].lon - pk.lon) * cosLat * 111320, dy = (tp[i].lat - pk.lat) * 110540, d = dx * dx + dy * dy;
@@ -1425,6 +1440,14 @@ async function trackPeaks(pts, top) {
     pk.dist = Math.sqrt(best); pk.order = bi; pk.distTop = top ? hav(top, pk) : Infinity;
     return pk;
   });
+}
+// fallback when no Overpass server answers: the nearest summit at the highest point via Nominatim
+async function peakAtTop(top) {
+  const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${top.lat.toFixed(5)}&lon=${top.lon.toFixed(5)}&zoom=17&layer=natural&extratags=1&accept-language=de`);
+  if (!d || !d.name || d.category !== "natural" || !/peak|volcano/.test(d.type || "")) return [];
+  const pk = { name: d.name, ele: eleOf(d.extratags && d.extratags.ele), lat: +d.lat, lon: +d.lon, order: 0 };
+  pk.distTop = hav(top, pk); pk.dist = pk.distTop;
+  return [pk];
 }
 async function countryOf(lat, lon) {
   const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=3&accept-language=de`);
@@ -1467,8 +1490,11 @@ function queueLookup(it) {
     if (!gpxItems.includes(it) || !it.a.top) { it.lookup = "fertig"; return; }
     it.lookup = "läuft";
     const { lat, lon } = it.a.top;
+    it.lookupFailed = false;
     try {
-      const all = await trackPeaks(it.pts, it.a.top);
+      let all, viaFallback = false;
+      try { all = await trackPeaks(it.pts, it.a.top); }
+      catch (err) { all = await peakAtTop(it.a.top); viaFallback = true; }
       const near = all.filter((p) => p.distTop <= 1500).sort((a, b) => a.distTop - b.distTop);
       it.peaks = near.slice(0, 8).map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.distTop }));
       const best = near.find((p) => p.distTop <= 500);
@@ -1481,8 +1507,10 @@ function queueLookup(it) {
       const extra = nx ? ` ${nx} weitere${nx === 1 ? "r" : ""} Gipfel am Weg erkannt.` : "";
       if (best) it.peakNote = `Gipfel aus OpenStreetMap: ${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.distTop)} m vom höchsten Punkt.${extra}`;
       else if (near.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${near.slice(0, 3).map((p) => p.name).join(", ")}.${extra}`;
+      else if (viaFallback) { it.peakNote = "Die Gipfelsuche von OpenStreetMap ist gerade überlastet."; it.lookupFailed = true; }
       else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen." + extra;
-    } catch (e) { it.peakNote = "Gipfelvorschlag gerade nicht möglich (keine Verbindung zu OpenStreetMap). Bitte selbst eintragen."; }
+      if (viaFallback && best) it.peakNote += " (Gipfel am Weg konnten gerade nicht gesucht werden.)";
+    } catch (e) { it.peakNote = "Gipfelsuche gerade nicht erreichbar."; it.lookupFailed = true; }
     try { await sleep(1100); if (!it.land) it.land = await countryOf(lat, lon); } catch (e) { /* country stays empty */ }
     it.lookup = "fertig";
     if (gpxItems.includes(it)) refreshCard(it);
@@ -1510,7 +1538,6 @@ function cardHtml(it) {
     a.dur && `<span><b>${a.dur}</b> h</span>`, a.km ? `<span><b>${nf1.format(a.km)}</b> km</span>` : "",
     a.hm != null && `<span><b>${nf.format(a.hm)}</b> Hm ↑</span>`, a.top && a.top.ele != null && `<span>höchster Punkt <b>${nf.format(a.top.ele)} m</b></span>`
   ].filter(Boolean).join("");
-  const note = it.lookup === "fertig" ? (it.peakNote || "") : "Suche Gipfel und Land in OpenStreetMap …";
   return `<article class="card${it.take ? "" : " off"}" data-id="${it.id}">
     <div class="card-top"><span class="fname" title="${esc(it.file)}">${esc(it.file)}</span>
       <label><input type="checkbox" data-take${it.take ? " checked" : ""}> speichern</label>
@@ -1518,10 +1545,14 @@ function cardHtml(it) {
     ${it.parts ? `<div class="note">Aus ${it.parts.length} Dateien: ${esc(it.parts.map((x) => x.file).join(", "))} · <button class="linkbtn" type="button" data-split>Wieder trennen</button></div>` : ""}
     <div class="facts">${facts || '<span class="note">Keine Zeit- oder Höhendaten im Track.</span>'}</div>
     ${(it.dup || []).length ? `<div class="note warn">Am ${fmtDate(it.d)} steht schon im Gipfelbuch: ${esc(it.dup.join(", "))}. Deshalb nicht angehakt.</div>` : ""}
-    <div class="note" data-note>${esc(note)}</div>
+    <div class="note${it.lookupFailed ? " warn" : ""}" data-note>${noteHtml(it)}</div>
     <div class="fields">${G_MAIN.map((f) => gpxFieldHtml(it, f)).join("")}</div>
     <details><summary>Weitere Felder: Datum, Dauer, Partner, Bewertung, Links …</summary><div class="fields">${G_MORE.map((f) => gpxFieldHtml(it, f)).join("")}</div></details>
   </article>`;
+}
+function noteHtml(it) {
+  if (it.lookup !== "fertig") return "Suche Gipfel und Land in OpenStreetMap …";
+  return esc(it.peakNote || "") + (it.lookupFailed ? ' <button class="linkbtn" type="button" data-relookup>Erneut suchen</button>' : "");
 }
 function renderCards() {
   $("cards").innerHTML = gpxItems.map(cardHtml).join("");
@@ -1531,7 +1562,7 @@ function renderCards() {
 }
 function refreshCard(it) {
   const el = document.querySelector(`.card[data-id="${it.id}"]`); if (!el) return;
-  el.querySelector("[data-note]").textContent = it.peakNote || "";
+  const nEl = el.querySelector("[data-note]"); nEl.innerHTML = noteHtml(it); nEl.classList.toggle("warn", !!it.lookupFailed);
   const res = $(`g-${it.id}-results`); if (res) res.innerHTML = peakButtons(it);
   for (const k of ["g", "h", "coord", "land"]) {
     const inp = $(`g-${it.id}-${k}`);
@@ -1564,6 +1595,13 @@ $("cards").addEventListener("change", (e) => {
   saveGpx();
 });
 $("cards").addEventListener("click", (e) => {
+  const rl = e.target.closest("[data-relookup]");
+  if (rl) {
+    const it = itemOf(rl); if (!it) return;
+    it.lookupFailed = false; it.lookup = "wartet";
+    const nEl = rl.closest("[data-note]"); nEl.classList.remove("warn"); nEl.innerHTML = noteHtml(it);
+    queueLookup(it); return;
+  }
   const np = e.target.closest("[data-npeak]");
   if (np) {
     const it = gpxItems.find((x) => x.id === np.dataset.item), p = it && it.peaks[+np.dataset.npeak];
