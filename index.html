@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Gipfelbuch">
+<script>try { var t = localStorage.getItem("gb-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
@@ -36,12 +37,18 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
     --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+    --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
+    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+    color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -162,6 +169,10 @@ details[open] > summary { margin-bottom: 8px; }
 .drop b { font: 700 17px/1.2 var(--f-display); }
 .drop span { color: var(--muted); font-size: 13px; }
 .drop.over { border-color: var(--accent); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--surface); color: var(--fg); padding: 9px 6px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); }
 ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
 ol.steps code { font-size: 13px; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
 
@@ -381,6 +392,15 @@ table.t td.num, table.t th.num { text-align: right; }
       </div>
       <div class="scroll"><div class="body pad">
         <div class="card">
+          <h4>Darstellung</h4>
+          <div class="seg" role="radiogroup" aria-label="Darstellung">
+            <button type="button" role="radio" data-theme-set="auto">Automatisch</button>
+            <button type="button" role="radio" data-theme-set="light">Hell</button>
+            <button type="button" role="radio" data-theme-set="dark">Dunkel</button>
+          </div>
+          <p class="note">»Automatisch« folgt der Einstellung deines iPhones bzw. Computers. Die Wahl gilt für dieses Gerät.</p>
+        </div>
+        <div class="card">
           <h4>Speicherort</h4>
           <p id="setRepo"></p>
           <p class="note" id="setSync"></p>
@@ -446,7 +466,7 @@ const EXTRA = {
 };
 const LWS = ["", "gering", "mäßig", "erheblich", "groß", "sehr groß"];
 const OVERPASS = "https://overpass-api.de/api/interpreter";
-const LS = { token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2", maph: "gb-maph" };
+const LS = { theme: "gb-theme", token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2", maph: "gb-maph" };
 const DEFAULT_REPO = "maxmm-ctrl/gipfelbuch-daten";
 const FILE = "gipfelbuch.json";
 const XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
@@ -1951,6 +1971,22 @@ $("setupGo").addEventListener("click", async () => {
     st.textContent = e.message; st.classList.add("err");
   } finally { $("setupGo").disabled = false; }
 });
+
+/* ===================== theme ===================== */
+function applyTheme(t) {
+  const root = document.documentElement;
+  if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
+  document.querySelectorAll("[data-theme-set]").forEach((b) => b.setAttribute("aria-checked", b.dataset.themeSet === (t === "light" || t === "dark" ? t : "auto") ? "true" : "false"));
+  const dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", dark ? "#12171C" : "#24364A");
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-theme-set]"); if (!b) return;
+  const t = b.dataset.themeSet;
+  if (t === "auto") lsDel(LS.theme); else lsSet(LS.theme, t);
+  applyTheme(t);
+});
+applyTheme(lsGet(LS.theme));
 
 /* ===================== boot ===================== */
 (function boot() {
