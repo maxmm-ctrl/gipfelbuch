@@ -5,20 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gipfelbuch</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="description" content="Persönliche Karte für Gipfelbuch und Tourenbuch.">
+<meta name="description" content="Persönliches Gipfelbuch mit Karte, GPX-Auswertung und Statistik.">
 <meta name="theme-color" content="#24364A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Gipfelbuch">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <style>
-/* Layout: full-height topo map with a side panel (desktop) or panel below the map (phone). Trail-blaze red is the one accent. */
+/* Layout: full-height topo map with a side panel (desktop) or a panel below the map (phone). Trail-blaze red is the one accent. */
 :root {
   --bg: #F7F8F6;
   --surface: #FFFFFF;
@@ -30,8 +29,7 @@
   --accent-fg: #FFFFFF;
   --ok: #2E7D4F;
   --warn: #9A5B00;
-  --track: #C8102E;
-  --marker-line: #FFFFFF;
+  --bar: #24364A;
   --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
   --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --shadow: 0 1px 2px rgba(20,30,40,.08), 0 6px 20px rgba(20,30,40,.12);
@@ -40,7 +38,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
-    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548;
+    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
     color-scheme: dark;
   }
@@ -51,21 +49,32 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--f-body); o
 button, input, select, textarea { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
 
-.app { height: 100%; display: grid; grid-template-columns: minmax(340px, 400px) 1fr; padding-top: env(safe-area-inset-top, 0px); }
+.app { height: 100%; display: grid; grid-template-columns: minmax(340px, 410px) 1fr; padding-top: env(safe-area-inset-top, 0px); }
 .panel { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--bg); border-right: 1px solid var(--line); }
 .map-wrap { position: relative; min-width: 0; min-height: 0; }
 #map { position: absolute; inset: 0; background: #E9ECE6; }
+#map.picking { cursor: crosshair; }
 .view { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 
-.head { padding-block: 16px 12px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
-.brand { display: flex; align-items: center; gap: 10px; }
+.head { padding-block: 14px 12px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); }
+.brandrow { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .blaze { width: 26px; height: 18px; border-radius: 2px; flex: none; background: linear-gradient(var(--accent) 0 33.3%, #FFFFFF 33.3% 66.6%, var(--accent) 66.6%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
 h1 { font: 700 26px/1 var(--f-display); letter-spacing: .01em; margin: 0; }
-h2 { font: 700 21px/1.1 var(--f-display); margin: 0; }
+h2 { font: 700 21px/1.1 var(--f-display); margin: 0; flex: 1; min-width: 0; }
+h3.sec { font: 700 16px/1.2 var(--f-display); letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
 .stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13.5px; }
 .stats b { color: var(--fg); font-weight: 600; font-size: 15px; }
+.sync { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sync.err { color: var(--accent); }
+.sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+.sync.err .dot { background: var(--accent); }
+.sync.busy .dot { background: var(--warn); }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; font-size: inherit; }
 
 .filters { padding-block: 12px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
 .label { font: 600 11.5px/1 var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -77,11 +86,12 @@ h2 { font: 700 21px/1.1 var(--f-display); margin: 0; }
 .chip[aria-pressed="false"] .dot { background: transparent; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .row > * { flex: 1 1 120px; min-width: 0; }
-select, input[type="search"], input[type="text"], input[type="number"], input[type="url"], input[type="date"], textarea {
+select, input[type="search"], input[type="text"], input[type="password"], input[type="url"], input[type="date"], textarea {
   width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; font-size: 16px; min-width: 0;
 }
-textarea { resize: vertical; min-height: 64px; }
-@media (min-width: 761px) { select, input[type="search"], input[type="text"], input[type="number"], input[type="url"], input[type="date"], textarea { font-size: 14px; } }
+input[type="date"] { min-height: 38px; }
+textarea { resize: vertical; min-height: 70px; }
+@media (min-width: 761px) { select, input[type="search"], input[type="text"], input[type="password"], input[type="url"], input[type="date"], textarea { font-size: 14px; } }
 .switch { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
 .switch input { width: 34px; height: 20px; appearance: none; -webkit-appearance: none; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); position: relative; cursor: pointer; margin: 0; flex: none; }
 .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
@@ -107,58 +117,80 @@ textarea { resize: vertical; min-height: 64px; }
 
 .foot { border-top: 1px solid var(--line); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
 .btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: var(--fg); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.danger { color: var(--accent); }
+.btn.danger.armed { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn.grow { flex: 1 1 auto; }
+.iconbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; min-width: 36px; height: 36px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 13.5px; font-weight: 600; flex: none; color: var(--fg); }
+.iconbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .status { font-size: 12.5px; color: var(--muted); }
 .status.err { color: var(--accent); }
 
-/* GPX view */
-.gv-head { display: flex; align-items: center; gap: 10px; padding-block: 14px 12px; border-bottom: 1px solid var(--line); }
-.iconbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; width: 36px; height: 36px; display: grid; place-items: center; cursor: pointer; font-size: 18px; flex: none; }
-.gv-body { flex: 1; min-height: 0; overflow-y: auto; padding-block: 12px; display: grid; gap: 12px; align-content: start; overscroll-behavior: contain; }
-.drop { border: 2px dashed var(--line); border-radius: 12px; padding: 18px 14px; display: grid; gap: 4px; text-align: center; cursor: pointer; background: var(--surface); }
-.drop b { font: 700 17px/1.2 var(--f-display); }
-.drop span { color: var(--muted); font-size: 13px; }
-.drop.over { border-color: var(--accent); }
-.card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px; display: grid; gap: 10px; }
+.vh { display: flex; align-items: center; gap: 10px; padding-block: 14px 12px; border-bottom: 1px solid var(--line); }
+.body { padding-block: 12px 20px; display: grid; gap: 12px; align-content: start; }
+.card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px; display: grid; gap: 10px; min-width: 0; }
 .card.off { opacity: .6; }
+.card h4 { font: 700 17px/1.2 var(--f-display); margin: 0; }
+.card p { margin: 0; font-size: 14px; }
 .card-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .card-top .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .card-top label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
-.card-top input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
 .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .facts span { white-space: nowrap; }
 .facts b { font-weight: 600; }
 .note { font-size: 12.5px; color: var(--muted); }
 .note.warn { color: var(--warn); }
-.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.fields .full { grid-column: 1 / -1; }
-.field { display: grid; gap: 3px; min-width: 0; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.fields .full, .fields h3.sec { grid-column: 1 / -1; }
+.field { display: grid; gap: 3px; min-width: 0; align-content: start; }
 .field > span { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.inline { display: flex; gap: 6px; }
+.inline > input { flex: 1; }
+.results { display: grid; gap: 4px; }
+.results button { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 13.5px; }
+.results button small { color: var(--muted); display: block; }
 details > summary { cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--accent); list-style: none; padding: 2px 0; }
 details > summary::-webkit-details-marker { display: none; }
 details[open] > summary { margin-bottom: 8px; }
-.gv-foot { border-top: 1px solid var(--line); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
 .multi { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--surface); padding: 12px; display: grid; gap: 8px; }
 .multi b { font: 700 16px/1.2 var(--f-display); }
-.mtline { color: var(--muted); font-size: 13px; }
-.mtline a { color: var(--accent); font-weight: 600; text-decoration: none; }
-.howto { background: var(--chip); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; display: grid; gap: 4px; }
-.howto b { font-weight: 600; }
-#copyFallback { font-family: ui-monospace, Menlo, monospace; font-size: 12px; min-height: 80px; }
+.drop { border: 2px dashed var(--line); border-radius: 12px; padding: 18px 14px; display: grid; gap: 4px; text-align: center; cursor: pointer; background: var(--surface); }
+.drop b { font: 700 17px/1.2 var(--f-display); }
+.drop span { color: var(--muted); font-size: 13px; }
+.drop.over { border-color: var(--accent); }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+ol.steps code { font-size: 13px; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.kpi { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.kpi b { font: 700 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi span { font-size: 12px; color: var(--muted); }
+.tblwrap { overflow-x: auto; }
+table.t { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+table.t th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+table.t td { padding: 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.t td.num, table.t th.num { text-align: right; }
+.bars { display: grid; gap: 6px; }
+.barrow { display: grid; grid-template-columns: 82px 1fr 74px; gap: 8px; align-items: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+.barrow .track { height: 12px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.barrow .fill { height: 100%; background: var(--c, var(--bar)); border-radius: 3px; }
+.barrow .v { text-align: right; color: var(--muted); }
+.barrow .k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .fitctl { box-shadow: var(--shadow); }
 .fitctl button { border: 0; background: var(--surface); color: var(--fg); font: 600 13px/1 var(--f-body); padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.pickhint { position: absolute; z-index: 800; left: 50%; top: 12px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 12px; border-radius: 8px; font-size: 14px; box-shadow: var(--shadow); display: flex; gap: 10px; align-items: center; max-width: calc(100% - 120px); }
+.pickhint button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.pin { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent); border: 3px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 
-/* Leaflet theming */
 .leaflet-container { font: 14px/1.4 var(--f-body); }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
 .leaflet-popup-content-wrapper { border-radius: 10px; }
 .leaflet-popup-content { margin: 14px 16px; width: min(320px, 72vw) !important; max-height: 50vh; overflow-y: auto; }
 .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
-.leaflet-control-layers { border-radius: 8px !important; }
 .leaflet-control-layers-expanded { padding: 8px 12px; font-size: 13.5px; }
 .leaflet-control-attribution { font-size: 10.5px; }
 .leaflet-tooltip.peak { background: transparent; border: 0; box-shadow: none; padding: 0; color: #1C242C; font: 700 12px/1 var(--f-body); text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
@@ -177,6 +209,7 @@ details[open] > summary { margin-bottom: 8px; }
 .vtxt { font-size: 13.5px; }
 .links { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; }
 .links a, .pp a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.mtline { color: var(--muted); font-size: 13px; }
 .coords { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pill { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 4px; }
 .pill.no { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); color: var(--warn); }
@@ -187,27 +220,61 @@ details[open] > summary { margin-bottom: 8px; }
 
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; grid-template-rows: 50% 50%; }
+  .app.tall { grid-template-rows: 32% 68%; }
+  .app.setup { grid-template-rows: 0 100%; }
   .map-wrap { order: 1; }
   .panel { order: 2; border-right: 0; border-top: 1px solid var(--line); }
-  #browseView { overflow-y: auto; }
-  #browseView .list { overflow: visible; flex: none; }
+  #v-browse { overflow-y: auto; }
+  #v-browse .list { overflow: visible; flex: none; }
   .pad { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   h1 { font-size: 23px; }
-  .head { padding-top: 12px; }
-  .fields { grid-template-columns: 1fr; }
-  .app.gpx-mode { grid-template-rows: 34% 66%; }
+  .iconbtn .lbl { display: none; }
 }
+@media (max-width: 380px) { .fields { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="panel" aria-label="Touren und Werkzeuge">
-    <!-- browse view -->
-    <section class="view" id="browseView">
+<div class="app" id="app">
+  <aside class="panel" aria-label="Gipfelbuch">
+
+    <!-- setup -->
+    <section class="view" id="v-setup" hidden>
+      <div class="vh pad">
+        <span class="blaze" aria-hidden="true"></span><h2>Gipfelbuch einrichten</h2>
+        <button class="iconbtn" id="setupBack" type="button" hidden>Zurück</button>
+      </div>
+      <div class="scroll"><div class="body pad">
+        <p style="margin:0">Deine Touren liegen privat in deinem GitHub-Repository. Damit diese Seite sie lesen und speichern darf, braucht sie einmal pro Gerät einen Zugangsschlüssel.</p>
+        <div class="card">
+          <h4>Schlüssel erstellen (einmalig, ca. 2 Minuten)</h4>
+          <ol class="steps">
+            <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Neuen Schlüssel auf GitHub erstellen ↗</a> (Fine-grained token)</li>
+            <li>Token name: <code>Gipfelbuch</code> · Expiration: die längste Option</li>
+            <li>Repository access: <b>Only select repositories</b> → <code>gipfelbuch-daten</code></li>
+            <li>Permissions → Repository permissions → <b>Contents</b>: <b>Read and write</b></li>
+            <li><b>Generate token</b>, den Schlüssel kopieren und unten einfügen.</li>
+          </ol>
+          <p class="note">Den Schlüssel kannst du für weitere Geräte im Passwort-Manager speichern. Er erlaubt nur den Zugriff auf dieses eine Repository.</p>
+        </div>
+        <label class="field" for="setupRepo"><span>Repository</span><input id="setupRepo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <label class="field" for="setupToken"><span>Zugangsschlüssel</span><input id="setupToken" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <button class="btn primary" id="setupGo" type="button">Verbinden</button>
+        <div class="status" id="setupStatus"></div>
+        <p class="note">Tipp fürs iPhone: Seite in Safari über »Teilen« → »Zum Home-Bildschirm« ablegen. Dann bleibt die Anmeldung dauerhaft erhalten.</p>
+      </div></div>
+    </section>
+
+    <!-- browse -->
+    <section class="view" id="v-browse" hidden>
       <div class="head pad">
-        <div class="brand"><span class="blaze" aria-hidden="true"></span><h1>Gipfelbuch</h1></div>
+        <div class="brandrow">
+          <div class="brand"><span class="blaze" aria-hidden="true"></span><h1>Gipfelbuch</h1></div>
+          <button class="iconbtn" id="statsBtn" type="button" aria-label="Statistik"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="lbl">Statistik</span></button>
+          <button class="iconbtn" id="settingsBtn" type="button" aria-label="Einstellungen und Daten"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+        </div>
         <div class="stats" id="stats" aria-live="polite"></div>
+        <div class="sync" id="sync"><span class="dot"></span><span id="syncText"></span></div>
       </div>
       <div class="filters pad">
         <div class="label">Sportart</div>
@@ -227,65 +294,115 @@ details[open] > summary { margin-bottom: 8px; }
       <div class="list" id="list"></div>
       <div class="foot pad">
         <div class="btns">
-          <button class="btn primary grow" id="gpxBtn" type="button">Neue Tour aus GPX</button>
-          <button class="btn grow" id="loadBtn" type="button">Excel laden</button>
+          <button class="btn primary grow" id="gpxBtn" type="button">GPX importieren</button>
+          <button class="btn grow" id="newBtn" type="button">+ Tour von Hand</button>
         </div>
-        <input id="file" type="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-        <div class="status" id="status"></div>
       </div>
     </section>
 
-    <!-- GPX view -->
-    <section class="view" id="gpxView" hidden>
-      <div class="gv-head pad">
-        <button class="iconbtn" id="gpxBack" type="button" aria-label="Zurück zur Übersicht">←</button>
-        <h2>Neue Tour aus GPX</h2>
+    <!-- GPX -->
+    <section class="view" id="v-gpx" hidden>
+      <div class="vh pad">
+        <button class="iconbtn" data-back type="button" aria-label="Zurück zur Übersicht">←</button>
+        <h2>GPX importieren</h2>
       </div>
-      <div class="gv-body pad" id="gpxBody">
+      <div class="scroll"><div class="body pad">
         <label class="drop" id="drop" for="gpxFile">
           <b>GPX-Datei wählen</b>
-          <span>Eine oder mehrere Dateien, z. B. aus der Suunto-App exportiert. Am Computer auch per Drag &amp; Drop.</span>
+          <span>Eine oder mehrere Workout-GPX, z. B. aus der Suunto-App. Am Computer auch per Drag &amp; Drop.</span>
         </label>
         <input id="gpxFile" type="file" multiple hidden>
         <div class="multi" id="multiBar" hidden>
-          <b id="multiTitle">Mehrere Touren gewählt</b>
+          <b id="multiTitle">Mehrere Touren angehakt</b>
           <label class="field" for="mtName"><span>Name der Mehrtagestour</span><input id="mtName" type="text" placeholder="z. B. Dachstein-Wochenende"></label>
           <div class="btns">
             <button class="btn grow" id="linkBtn" type="button">Als Mehrtagestour verknüpfen</button>
-            <button class="btn grow" id="mergeBtn" type="button">Zu einer Zeile zusammenführen</button>
+            <button class="btn grow" id="mergeBtn" type="button">Zu einer Tour zusammenführen</button>
           </div>
-          <div class="note"><b style="font:inherit;font-weight:600">Verknüpfen:</b> jede Datei bleibt eine eigene Zeile mit eigenem Gipfel, alle bekommen denselben Namen. <b style="font:inherit;font-weight:600">Zusammenführen:</b> eine Zeile für die ganze Tour, Höhenmeter, Distanz und Zeit werden addiert, »Tage« wird gesetzt.</div>
+          <div class="note"><b style="font:inherit;font-weight:600">Verknüpfen:</b> jede Datei bleibt eine eigene Tour mit eigenem Gipfel, alle bekommen denselben Namen. <b style="font:inherit;font-weight:600">Zusammenführen:</b> eine Tour, Höhenmeter, Distanz und Zeit werden addiert, die Anzahl Tage wird gesetzt.</div>
         </div>
         <div id="cards" style="display:grid;gap:12px"></div>
-      </div>
-      <div class="gv-foot pad">
-        <div class="row" style="align-items:center">
-          <label class="field" style="flex:1 1 180px"><span>Zahlenformat in Excel</span>
-            <select id="fmt"><option value="de">Deutsch (9,5 km · 14.02.2026)</option><option value="en">Englisch (9.5 km · 2026-02-14)</option></select>
-          </label>
-        </div>
-        <button class="btn primary" id="copyBtn" type="button" disabled>Zeile kopieren</button>
-        <div class="howto" id="howto" hidden>
-          <b>Kopiert. So geht's weiter in Excel:</b>
-          <span>Tourenbuch öffnen → Zelle in <b>Spalte A</b> der ersten freien Zeile direkt unter der Tabelle antippen → <b>Einfügen</b>. Alle kopierten Touren landen untereinander. Danach hier »Excel laden«, damit die Karte den neuen Stand zeigt.</span>
-          <div class="btns"><button class="btn" id="clearCopied" type="button">Übertragene aus der Liste entfernen</button></div>
-        </div>
-        <textarea id="copyFallback" readonly hidden aria-label="Excel-Zeilen zum Kopieren"></textarea>
+      </div></div>
+      <div class="foot pad">
+        <button class="btn primary" id="gpxSave" type="button" disabled>Im Gipfelbuch speichern</button>
         <div class="status" id="gpxStatus"></div>
       </div>
+    </section>
+
+    <!-- form -->
+    <section class="view" id="v-form" hidden>
+      <div class="vh pad">
+        <button class="iconbtn" data-back type="button" aria-label="Abbrechen">←</button>
+        <h2 id="formTitle">Tour</h2>
+      </div>
+      <div class="scroll"><div class="body pad" id="formBody"></div></div>
+      <div class="foot pad">
+        <div class="btns">
+          <button class="btn primary grow" id="formSave" type="button">Speichern</button>
+          <button class="btn danger" id="formDelete" type="button" hidden>Löschen</button>
+        </div>
+        <div class="status" id="formStatus"></div>
+      </div>
+    </section>
+
+    <!-- stats -->
+    <section class="view" id="v-stats" hidden>
+      <div class="vh pad">
+        <button class="iconbtn" data-back type="button" aria-label="Zurück zur Übersicht">←</button>
+        <h2>Statistik</h2>
+      </div>
+      <div class="scroll"><div class="body pad" id="statsBody"></div></div>
+    </section>
+
+    <!-- settings -->
+    <section class="view" id="v-settings" hidden>
+      <div class="vh pad">
+        <button class="iconbtn" data-back type="button" aria-label="Zurück zur Übersicht">←</button>
+        <h2>Einstellungen &amp; Daten</h2>
+      </div>
+      <div class="scroll"><div class="body pad">
+        <div class="card">
+          <h4>Speicherort</h4>
+          <p id="setRepo"></p>
+          <p class="note" id="setSync"></p>
+          <div class="btns">
+            <button class="btn" id="syncNow" type="button">Jetzt aktualisieren</button>
+            <a class="btn" id="historyLink" target="_blank" rel="noopener">Verlauf auf GitHub ↗</a>
+          </div>
+          <div class="btns">
+            <button class="btn" id="changeAccess" type="button">Zugang ändern</button>
+            <button class="btn danger" id="logout" type="button">Auf diesem Gerät abmelden</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Excel</h4>
+          <p>Export: eine aktuelle Excel-Datei mit Tourenbuch und Bucketlist, z. B. als Backup oder zum Auswerten.</p>
+          <button class="btn" id="exportXlsx" type="button">Als Excel exportieren</button>
+          <p>Import: Touren aus einer Excel-Datei übernehmen (z. B. eine bisherige Liste oder ein früherer Export).</p>
+          <button class="btn" id="importXlsx" type="button">Excel importieren</button>
+          <input id="importFile" type="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+          <div id="importBox" hidden></div>
+          <div class="status" id="xlsxStatus"></div>
+        </div>
+        <div class="card">
+          <h4>Datenschutz</h4>
+          <p class="note">Diese Website ist öffentlich erreichbar, enthält aber keine Touren. Deine Daten liegen in deinem privaten Repository und werden nur mit deinem Schlüssel geladen. Für Gipfelvorschläge und die Gipfelsuche werden Koordinaten bzw. Suchbegriffe an OpenStreetMap geschickt.</p>
+        </div>
+      </div></div>
     </section>
   </aside>
   <div class="map-wrap">
     <div id="map" role="region" aria-label="Karte"></div>
+    <div class="pickhint" id="pickHint" hidden><span>Tippe auf die Karte, um den Punkt zu setzen.</span><button type="button" id="pickCancel">Abbrechen</button></div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 <script>
 (() => {
 "use strict";
 
-/* ===================== basics ===================== */
+/* ===================== constants ===================== */
 const SPORT_COLORS = {
   "Skitour": "#1F64B0", "Skihochtour": "#4E4FC2", "Hochtour": "#08808D", "Klettern": "#C8341F",
   "Kletterei": "#E07B12", "Klettersteig": "#8E3BAE", "Wandern": "#2F8A35", "MTB": "#7A4E2D",
@@ -293,8 +410,20 @@ const SPORT_COLORS = {
 };
 const SPORT_ORDER = Object.keys(SPORT_COLORS);
 const FALLBACK = ["#4F6D7A", "#9C6644", "#6A994E", "#B56576", "#3D5A80", "#E07A5F", "#81B29A"];
-const LS_DATA = "gipfelbuch-data-v1", LS_BASE = "gipfelbuch-base", LS_FMT = "gipfelbuch-fmt", LS_GPX = "gipfelbuch-gpx-v1";
+const SAC = ["L", "WS-", "WS", "WS+", "ZS-", "ZS", "ZS+", "S-", "S", "S+", "SS-", "SS", "SS+", "AS", "EX"];
+const GRADES = {
+  "Klettern": ["3-", "3", "3+", "4-", "4", "4+", "5-", "5", "5+", "6-", "6", "6+", "7-", "7", "7+", "8-", "8", "8+", "9-", "9", "9+", "10-", "10", "10+", "11-", "11"],
+  "Kletterei": ["I", "I+", "II-", "II", "II+", "III-", "III", "III+", "IV-", "IV"],
+  "Klettersteig": ["A", "A/B", "B", "B/C", "C", "C/D", "D", "D/E", "E", "E/F", "F"],
+  "Hochtour": SAC, "Skihochtour": SAC
+};
+const LS = { token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2" };
+const DEFAULT_REPO = "maxmm-ctrl/gipfelbuch-daten";
+const FILE = "gipfelbuch.json";
+const XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+const XLSX_SRI = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
 
+/* ===================== utils ===================== */
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const nf = new Intl.NumberFormat("de-AT");
@@ -304,357 +433,19 @@ const colorFor = (s) => {
   let h = 0; for (const ch of String(s || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return FALLBACK[h % FALLBACK.length];
 };
-const fmtDate = (iso) => { if (!iso) return ""; const [y, m, d] = iso.split("-"); return d && m ? `${d}.${m}.${y}` : iso; };
+const fmtDate = (iso) => { if (!iso) return ""; const [y, m, d] = String(iso).split("-"); return d && m ? `${d}.${m}.${y}` : iso; };
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readFile = (file, asText) => new Promise((res, rej) => {
   const fr = new FileReader();
   fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error || new Error("Datei konnte nicht gelesen werden."));
   asText ? fr.readAsText(file) : fr.readAsArrayBuffer(file);
 });
-
-const state = { tours: [], bucket: [], meta: null, sportsOff: new Set(), year: "", land: "", mt: "", q: "", showBucket: true, tab: "tours" };
-
-/* ===================== map ===================== */
-const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende';
-const bases = {
-  "Topo (OpenTopoMap)": L.tileLayer("https://tile.openmaps.fr/opentopomap/{z}/{x}/{y}.png", {
-    maxZoom: 17, maxNativeZoom: 16,
-    attribution: `Karte: <a href="https://openmaps.fr" target="_blank" rel="noopener">OpenTopoMap-R</a> (CC-BY-SA) · ${OSM}, SRTM`
-  }),
-  "Wanderkarte (OpenHikingMap)": L.tileLayer("https://tile.openmaps.fr/openhikingmap/{z}/{x}/{y}.png", {
-    maxZoom: 17, maxNativeZoom: 16,
-    attribution: `Karte: <a href="https://openmaps.fr" target="_blank" rel="noopener">OpenHikingMap</a> · ${OSM}`
-  }),
-  "Schweiz (swisstopo)": L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg", {
-    maxZoom: 18, bounds: [[45.75, 5.85], [47.85, 10.55]],
-    attribution: '© <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo</a>'
-  }),
-  "Satellit (Esri)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 18, attribution: "Bild: © Esri, Maxar, Earthstar Geographics"
-  })
-};
-// If the openmaps.fr topo server does not answer, fall back to the classic OpenTopoMap server.
-(function topoFallback() {
-  const t = bases["Topo (OpenTopoMap)"]; let ok = 0, bad = 0, switched = false;
-  t.on("tileload", () => { ok++; });
-  t.on("tileerror", () => {
-    bad++;
-    if (!switched && ok === 0 && bad >= 6) { switched = true; t.setUrl("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"); }
-  });
-})();
-
-const map = L.map("map", { zoomControl: true, minZoom: 3, maxZoom: 18, worldCopyJump: true }).setView([47.3, 12.5], 7);
-map.attributionControl.setPrefix(false);
-const savedBase = lsGet(LS_BASE);
-(bases[savedBase] || bases["Topo (OpenTopoMap)"]).addTo(map);
-L.control.layers(bases, null, { position: "topright", collapsed: true }).addTo(map);
-map.on("baselayerchange", (e) => lsSet(LS_BASE, e.name));
-L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
-const FitControl = L.Control.extend({
-  options: { position: "topleft" },
-  onAdd() {
-    const d = L.DomUtil.create("div", "leaflet-bar fitctl");
-    d.innerHTML = '<button type="button" title="Alle Punkte zeigen">Alle zeigen</button>';
-    L.DomEvent.disableClickPropagation(d);
-    d.firstChild.addEventListener("click", () => fitAll());
-    return d;
-  }
-});
-new FitControl().addTo(map);
-
-map.createPane("pts"); map.getPane("pts").style.zIndex = 450;
-const ptsR = L.canvas({ pane: "pts", padding: 0.4, tolerance: 6 });
-const tourLayer = L.layerGroup().addTo(map);
-const bucketLayer = L.layerGroup().addTo(map);
-const previewLayer = L.layerGroup().addTo(map);
-const stageLayer = L.layerGroup().addTo(map);
-let markerIndex = new Map();
-const syncLabels = () => $("map").classList.toggle("labels", map.getZoom() >= 12);
-map.on("zoomend", syncLabels); syncLabels();
-
-/* ===================== filtering & rendering ===================== */
-function filteredTours() {
-  const q = state.q.trim().toLowerCase();
-  return state.tours.filter((t) => {
-    if (state.sportsOff.has(t.s || "–")) return false;
-    if (state.year && String(t.d || "").slice(0, 4) !== state.year) return false;
-    if (state.land && (t.land || "") !== state.land) return false;
-    if (state.mt && (t.mt || "") !== state.mt) return false;
-    if (q && ![t.g, t.r, t.p, t.geb, t.land, t.txt, t.s, t.v, t.mt].join(" ").toLowerCase().includes(q)) return false;
-    return true;
-  });
-}
-function bucketDone(b) {
-  const g = (b.g || "").trim().toLowerCase(), r = (b.r || "").trim().toLowerCase();
-  if (!g) return false;
-  return state.tours.some((t) => (t.g || "").trim().toLowerCase() === g && (!r || (t.r || "").toLowerCase().includes(r)) && t.ok !== "Nein");
-}
-function filteredBucket() {
-  const q = state.q.trim().toLowerCase();
-  return state.bucket.filter((b) => {
-    if (bucketDone(b) || state.mt) return false;
-    if (state.sportsOff.has(b.s || "–")) return false;
-    if (state.land && (b.land || "") !== state.land) return false;
-    if (q && ![b.g, b.r, b.geb, b.land, b.txt, b.s].join(" ").toLowerCase().includes(q)) return false;
-    return true;
-  });
-}
-const keyOf = (o) => `${o.lat.toFixed(4)},${o.lon.toFixed(4)}`;
-
-function render() {
-  renderControls();
-  const tours = filteredTours(), bucket = filteredBucket();
-  renderStats(tours);
-  renderMarkers(tours, bucket);
-  renderList(tours, bucket);
-}
-function sportsKnown() {
-  const set = new Set(SPORT_ORDER);
-  for (const t of state.tours) if (t.s) set.add(t.s);
-  for (const b of state.bucket) if (b.s) set.add(b.s);
-  return [...set];
-}
-function renderControls() {
-  const counts = {};
-  for (const t of state.tours) counts[t.s || "–"] = (counts[t.s || "–"] || 0) + 1;
-  for (const b of state.bucket) { const k = b.s || "–"; if (!(k in counts)) counts[k] = 0; }
-  const sports = Object.keys(counts).sort((a, b) => {
-    const ia = SPORT_ORDER.indexOf(a), ib = SPORT_ORDER.indexOf(b);
-    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b, "de");
-  });
-  $("sports").innerHTML = sports.map((s) =>
-    `<button type="button" class="chip" data-s="${esc(s)}" aria-pressed="${!state.sportsOff.has(s)}" style="--c:${colorFor(s)}"><span class="dot"></span>${esc(s)}<span class="n">${counts[s]}</span></button>`
-  ).join("") || `<span class="status">Noch keine Touren geladen</span>`;
-  const years = [...new Set(state.tours.map((t) => String(t.d || "").slice(0, 4)).filter(Boolean))].sort().reverse();
-  if (state.year && !years.includes(state.year)) state.year = "";
-  $("year").innerHTML = `<option value="">Alle Jahre</option>` + years.map((y) => `<option${y === state.year ? " selected" : ""}>${y}</option>`).join("");
-  const lands = [...new Set([...state.tours, ...state.bucket].map((t) => t.land).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
-  if (state.land && !lands.includes(state.land)) state.land = "";
-  $("land").innerHTML = `<option value="">Alle Länder</option>` + lands.map((l) => `<option${l === state.land ? " selected" : ""}>${esc(l)}</option>`).join("");
-  const mts = {};
-  for (const t of state.tours) if (t.mt) mts[t.mt] = (mts[t.mt] || 0) + 1;
-  const mtNames = Object.keys(mts).sort((a, b) => a.localeCompare(b, "de"));
-  if (state.mt && !mtNames.includes(state.mt)) state.mt = "";
-  $("mt").hidden = !mtNames.length;
-  $("mt").innerHTML = `<option value="">Mehrtagestour: alle Touren</option>` + mtNames.map((n) => `<option value="${esc(n)}"${n === state.mt ? " selected" : ""}>${esc(n)} (${mts[n]})</option>`).join("");
-  $("tabTours").textContent = `Touren (${state.tours.length})`;
-  $("tabBucket").textContent = `Bucketlist (${state.bucket.filter((b) => !bucketDone(b)).length})`;
-}
-function renderStats(tours) {
-  const peaks = new Set(tours.filter((t) => t.ok !== "Nein").map((t) => (t.g || "").toLowerCase()).filter(Boolean));
-  const hm = tours.reduce((a, t) => a + (+t.hm || 0), 0);
-  const km = tours.reduce((a, t) => a + (+t.km || 0), 0);
-  const days = new Set(tours.map((t) => t.d).filter(Boolean)).size + tours.reduce((a, t) => a + Math.max(0, (+t.tage || 1) - 1), 0);
-  $("stats").innerHTML = `<span><b>${nf.format(tours.length)}</b> Touren</span><span><b>${nf.format(peaks.size)}</b> Gipfel</span>` +
-    (days ? `<span><b>${nf.format(days)}</b> Tage</span>` : "") +
-    `<span><b>${nf.format(Math.round(hm))}</b> Hm</span>` + (km ? `<span><b>${nf.format(Math.round(km))}</b> km</span>` : "");
-}
-function renderMarkers(tours, bucket) {
-  tourLayer.clearLayers(); bucketLayer.clearLayers(); stageLayer.clearLayers(); markerIndex = new Map();
-  const stages = {};
-  for (const t of tours) if (t.mt && isFinite(t.lat) && isFinite(t.lon)) (stages[t.mt] = stages[t.mt] || []).push(t);
-  for (const list of Object.values(stages)) {
-    list.sort((a, b) => String(a.d || "").localeCompare(String(b.d || "")));
-    const ll = [];
-    for (const t of list) { const p = [t.lat, t.lon]; const last = ll[ll.length - 1]; if (!last || last[0] !== p[0] || last[1] !== p[1]) ll.push(p); }
-    if (ll.length > 1) stageLayer.addLayer(L.polyline(ll, { color: "#24364A", weight: 3, opacity: 0.85, dashArray: "2 7", lineCap: "round", interactive: false }));
-  }
-  const groups = new Map();
-  for (const t of tours) {
-    if (!isFinite(t.lat) || !isFinite(t.lon)) continue;
-    const k = keyOf(t); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t);
-  }
-  for (const visits of groups.values()) {
-    visits.sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")));
-    const latest = visits[0];
-    const allNo = visits.every((v) => v.ok === "Nein");
-    const m = L.circleMarker([latest.lat, latest.lon], {
-      renderer: ptsR, radius: Math.min(12, 7.5 + (visits.length - 1) * 1.5), color: "#FFFFFF", weight: 2.5,
-      fillColor: colorFor(latest.s), fillOpacity: allNo ? 0.5 : 1
-    });
-    m.bindPopup(() => tourPopup(visits), { maxWidth: 360, autoPanPadding: [24, 24] });
-    m.bindTooltip(esc(latest.g || latest.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
-    tourLayer.addLayer(m);
-    for (const v of visits) markerIndex.set(v._id, m);
-  }
-  if (!state.showBucket) return;
-  for (const b of bucket) {
-    if (!isFinite(b.lat) || !isFinite(b.lon)) continue;
-    const m = L.circleMarker([b.lat, b.lon], {
-      renderer: ptsR, radius: 8, color: colorFor(b.s), weight: 3, dashArray: "3 3", fillColor: "#FFFFFF", fillOpacity: 0.9
-    });
-    m.bindPopup(() => bucketPopup(b), { maxWidth: 360, autoPanPadding: [24, 24] });
-    m.bindTooltip(esc(b.g || b.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
-    bucketLayer.addLayer(m);
-    markerIndex.set(b._id, m);
-  }
-}
-const linkList = (links) => (links || []).filter((l) => /^https?:\/\//i.test(l.u)).map((l) =>
-  `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.l || "Link")} ↗</a>`).join("");
-function mapLinks(o) {
-  const la = o.lat.toFixed(5), lo = o.lon.toFixed(5);
-  return `<div class="coords"><span>${la}, ${lo}</span>` +
-    `<a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div>`;
-}
-const stars = (n) => { n = +n || 0; return n ? `<span class="stars" aria-label="${n} von 5 Sternen">${"★".repeat(n)}</span>` : ""; };
-function tourPopup(visits) {
-  const t = visits[0];
-  const head = [t.h ? nf.format(t.h) + " m" : "", t.geb, t.land].filter(Boolean).join(" · ");
-  let html = `<div class="pp"><h3>${esc(t.g || t.r || "Ohne Namen")}</h3><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
-  for (const v of visits) {
-    const facts = [+v.tage > 1 && `${v.tage} Tage`, v.sch && `Grad ${v.sch}`, v.sl && `${v.sl} SL`, v.hm && `${nf.format(v.hm)} Hm`, v.km && `${nf1.format(v.km)} km`, v.dur && `${v.dur} h`].filter(Boolean).join(" · ");
-    html += `<div class="visit">
-      ${v.mt ? stageLine(v) : ""}
-      <div class="vhead"><span>${esc(fmtDate(v.d))}</span><span class="tag" style="--c:${colorFor(v.s)}">${esc(v.s || "–")}</span>${stars(v.b)}${v.ok === "Nein" ? '<span class="pill no">Umkehr</span>' : ""}</div>
-      ${v.r ? `<div class="vroute">${esc(v.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
-      ${v.p ? `<div class="vfacts">mit ${esc(v.p)}</div>` : ""}${v.v ? `<div class="vfacts">${esc(v.v)}</div>` : ""}
-      ${v.txt ? `<div class="vtxt">${esc(v.txt)}</div>` : ""}${(v.links || []).length ? `<div class="links">${linkList(v.links)}</div>` : ""}
-    </div>`;
-  }
-  return html + mapLinks(t) + "</div>";
-}
-function stageLine(v) {
-  const dates = [...new Set(state.tours.filter((t) => t.mt === v.mt).map((t) => t.d).filter(Boolean))].sort();
-  const i = dates.indexOf(v.d);
-  return `<div class="mtline">↔ <a href="#" data-mt="${esc(v.mt)}">${esc(v.mt)}</a>${i >= 0 && dates.length > 1 ? ` · Tag ${i + 1} von ${dates.length}` : ""}</div>`;
-}
-document.addEventListener("click", (e) => {
-  const a = e.target.closest("[data-mt]"); if (!a) return;
-  e.preventDefault();
-  state.mt = a.dataset.mt; map.closePopup(); render(); fitAll();
-});
-$("mt").addEventListener("change", (e) => { state.mt = e.target.value; render(); if (state.mt) fitAll(); });
-function bucketPopup(b) {
-  const head = [b.h ? nf.format(b.h) + " m" : "", b.geb, b.land].filter(Boolean).join(" · ");
-  const facts = [b.sch && `Grad ${b.sch}`, b.sl && `${b.sl} SL`, b.hm && `${nf.format(b.hm)} Hm`, b.zeit && `Beste Zeit: ${b.zeit}`].filter(Boolean).join(" · ");
-  return `<div class="pp"><h3>${esc(b.g || b.r || "Ziel")}</h3><div class="sub">${esc(head)}</div>
-    <div class="visit"><div class="vhead"><span class="pill goal">Bucketlist${b.prio ? " · " + esc(b.prio) : ""}</span><span class="tag" style="--c:${colorFor(b.s)}">${esc(b.s || "–")}</span></div>
-    ${b.r ? `<div class="vroute">${esc(b.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
-    ${b.txt ? `<div class="vtxt">${esc(b.txt)}</div>` : ""}${(b.links || []).length ? `<div class="links">${linkList(b.links)}</div>` : ""}</div>
-    ${mapLinks(b)}</div>`;
-}
-function renderList(tours, bucket) {
-  const box = $("list");
-  if (state.tab === "tours") {
-    if (!state.tours.length) {
-      box.innerHTML = `<div class="empty pad"><b>Noch keine Touren geladen</b><span>Tippe unten auf »Excel laden« und wähle deine Gipfelbuch-Datei (am iPhone über »Durchsuchen« → OneDrive). Die Datei wird nur hier im Browser gelesen.</span></div>`;
-      return;
-    }
-    if (!tours.length) { box.innerHTML = `<div class="empty pad"><b>Keine Treffer</b><span>Kein Eintrag passt zu den Filtern.</span></div>`; return; }
-    const sorted = [...tours].sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")));
-    const byYear = {};
-    for (const t of sorted) { const y = String(t.d || "").slice(0, 4) || "Ohne Datum"; (byYear[y] = byYear[y] || []).push(t); }
-    let html = "", cur = null;
-    for (const t of sorted) {
-      const y = String(t.d || "").slice(0, 4) || "Ohne Datum";
-      if (y !== cur) { cur = y; html += `<div class="year">${esc(y)}<span>${byYear[y].length} Touren · ${nf.format(byYear[y].reduce((a, x) => a + (+x.hm || 0), 0))} Hm</span></div>`; }
-      const meta = [fmtDate(t.d), +t.tage > 1 && `${t.tage} Tage`, t.s, t.r, t.sch, t.mt && `↔ ${t.mt}`].filter(Boolean).join(" · ") + (!isFinite(t.lat) ? " · ohne Koordinaten" : "");
-      html += `<button type="button" class="item${t.ok === "Nein" ? " turned" : ""}" data-id="${t._id}" style="--c:${colorFor(t.s)}">
-        <span class="dot"></span><span class="t">${esc(t.g || t.r || "Ohne Namen")}</span><span class="r">${t.hm ? nf.format(t.hm) + " Hm" : ""}</span>
-        <span class="meta">${esc(meta)}</span></button>`;
-    }
-    box.innerHTML = html;
-  } else {
-    if (!bucket.length) { box.innerHTML = `<div class="empty pad"><b>Keine offenen Ziele</b><span>Ziele trägst du im Excel-Blatt »Bucketlist« ein. Erledigte Ziele verschwinden hier automatisch.</span></div>`; return; }
-    const prio = { "Hoch": 0, "Mittel": 1, "Irgendwann": 2 };
-    const sorted = [...bucket].sort((a, b) => (prio[a.prio] ?? 3) - (prio[b.prio] ?? 3) || (a.g || "").localeCompare(b.g || "", "de"));
-    let html = "", cur = null;
-    for (const b of sorted) {
-      const p = b.prio || "Ohne Priorität";
-      if (p !== cur) { cur = p; html += `<div class="year">${esc(p)}<span></span></div>`; }
-      const meta = [b.s, b.r, b.sch, b.zeit].filter(Boolean).join(" · ") + (!isFinite(b.lat) ? " · ohne Koordinaten" : "");
-      html += `<button type="button" class="item" data-id="${b._id}" style="--c:${colorFor(b.s)}">
-        <span class="dot ring"></span><span class="t">${esc(b.g || b.r)}</span><span class="r">${b.h ? nf.format(b.h) + " m" : ""}</span>
-        <span class="meta">${esc(meta)}</span></button>`;
-    }
-    box.innerHTML = html;
-  }
-}
-function fitAll() {
-  const pts = [];
-  for (const lg of [tourLayer, bucketLayer, previewLayer]) lg.eachLayer((m) => { if (m.getLatLng) pts.push(m.getLatLng()); else if (m.getBounds) { const b = m.getBounds(); pts.push(b.getNorthEast(), b.getSouthWest()); } });
-  if (pts.length === 1) map.setView(pts[0], 12);
-  else if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 13 });
-}
-
-/* ===================== browse events ===================== */
-$("sports").addEventListener("click", (e) => {
-  const b = e.target.closest(".chip"); if (!b) return;
-  const s = b.dataset.s, all = [...$("sports").querySelectorAll(".chip")].map((x) => x.dataset.s);
-  if (state.sportsOff.size === 0 && all.length > 1) all.forEach((x) => x !== s && state.sportsOff.add(x));
-  else if (state.sportsOff.has(s)) state.sportsOff.delete(s);
-  else { state.sportsOff.add(s); if (state.sportsOff.size === all.length) state.sportsOff.clear(); }
-  render();
-});
-$("year").addEventListener("change", (e) => { state.year = e.target.value; render(); });
-$("land").addEventListener("change", (e) => { state.land = e.target.value; render(); });
-let qT; $("q").addEventListener("input", (e) => { clearTimeout(qT); qT = setTimeout(() => { state.q = e.target.value; render(); }, 150); });
-$("showBucket").addEventListener("change", (e) => { state.showBucket = e.target.checked; render(); });
-function setTab(t) { state.tab = t; $("tabTours").setAttribute("aria-selected", t === "tours"); $("tabBucket").setAttribute("aria-selected", t === "bucket"); render(); }
-$("tabTours").addEventListener("click", () => setTab("tours"));
-$("tabBucket").addEventListener("click", () => setTab("bucket"));
-$("list").addEventListener("click", (e) => {
-  const it = e.target.closest(".item"); if (!it) return;
-  const m = markerIndex.get(it.dataset.id);
-  if (!m) { toast(it.textContent.includes("ohne Koordinaten") ? "Für diesen Eintrag fehlen Koordinaten in der Excel." : "Dieser Punkt ist gerade ausgeblendet."); return; }
-  document.querySelectorAll(".item.active").forEach((x) => x.classList.remove("active"));
-  it.classList.add("active");
-  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 });
-  map.once("moveend", () => m.openPopup());
-});
-$("loadBtn").addEventListener("click", () => $("file").click());
-$("file").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importExcel(f); });
-
-function setStatus(msg, err) { const s = $("status"); s.textContent = msg || ""; s.classList.toggle("err", !!err); }
-let toastT;
-function toast(msg) {
-  let t = document.querySelector(".toast");
-  if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
-  t.textContent = msg; t.hidden = false;
-  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3800);
-}
-function describeMeta() {
-  const m = state.meta; if (!m) return "";
-  const when = m.at ? new Date(m.at).toLocaleString("de-AT", { dateStyle: "medium", timeStyle: "short" }) : "";
-  return `Stand: ${m.file || "Excel"} · geladen ${when}`;
-}
-
-/* ===================== Excel import ===================== */
-let xlsxPromise = null;
-function loadXlsx() {
-  if (window.XLSX) return Promise.resolve(window.XLSX);
-  if (!xlsxPromise) xlsxPromise = new Promise((res, rej) => {
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
-    s.onload = () => res(window.XLSX); s.onerror = () => { xlsxPromise = null; rej(new Error("xlsx")); };
-    document.head.appendChild(s);
-  });
-  return xlsxPromise;
-}
-const norm = (h) => String(h || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
-const ALIAS = {
-  d: ["datum", "date", "wann"], s: ["sportart", "sport", "art"], g: ["gipfelziel", "gipfel", "ziel", "berg", "name"],
-  r: ["route", "tourname", "routetourname", "tour"], geb: ["gebirgsgruppe", "gebirge", "region", "gebiet"], land: ["land", "landregion"],
-  h: ["gipfelhohe", "hohe", "gipfelhohem", "hohem"], hm: ["hohenmeter", "hm", "aufstieg"], km: ["distanz", "km", "distanzkm", "strecke"],
-  dur: ["dauer", "dauerh", "zeit"], sch: ["schwierigkeit", "grad"], sl: ["seillangen", "sl"], p: ["partner", "mit"],
-  v: ["verhaltnisse", "wetter", "verhaltnissewetter", "bedingungen"], b: ["bewertung", "sterne"], ok: ["gipfelerreicht", "erreicht"],
-  txt: ["beschreibung", "notizen", "notiz", "kommentar"], coord: ["koordinaten", "koordinate", "coords", "position"],
-  lat: ["breite", "lat", "latitude", "breitengrad"], lon: ["lange", "lon", "lng", "longitude", "langengrad"],
-  prio: ["prioritat", "prio"], zeit: ["bestezeit", "saison"], mt: ["mehrtagestour", "mehrtagestouren", "tourgruppe", "gruppe"],
-  tage: ["tage", "anzahltage"]
-};
-function headerMap(row) {
-  const m = {}, links = [];
-  row.forEach((h, i) => {
-    const n = norm(h); if (!n) return;
-    if (n.startsWith("link")) { links.push({ i, l: String(h).replace(/^link\s*/i, "").trim() || "Link" }); return; }
-    for (const [k, al] of Object.entries(ALIAS)) if (al.includes(n) && !(k in m)) { m[k] = i; break; }
-  });
-  return { map: m, links };
-}
-const valid = (lat, lon) => (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0)) ? { lat, lon } : null;
+const valid = (lat, lon) => (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0)) ? { lat: +lat, lon: +lon } : null;
 function parseCoord(txt) {
   if (txt == null) return null;
   const s = String(txt).trim(); if (!s) return null;
@@ -675,112 +466,689 @@ function parseCoord(txt) {
   if (!nums || nums.length < 2) return null;
   return valid(+nums[0], +nums[1]);
 }
-function toIsoDate(cell, X) {
-  if (!cell) return "";
-  if (cell.t === "n" && cell.v > 1000) { const p = X.SSF.parse_date_code(cell.v); return p ? `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}` : ""; }
-  if (cell.t === "d" && cell.v instanceof Date) { const d = cell.v; return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-  const s = String(cell.w ?? cell.v ?? "").trim();
-  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
-  if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
-  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  return "";
-}
-function toDur(cell) {
-  if (!cell) return "";
-  if (cell.t === "n") { const mins = cell.v < 3 ? Math.round(cell.v * 1440) : Math.round(cell.v * 60); return `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`; }
-  return String(cell.w ?? cell.v ?? "").trim();
-}
-function toNum(cell) {
-  if (!cell) return null;
-  if (cell.t === "n") return Math.round(cell.v * 100) / 100;
-  const s = String(cell.v ?? "").replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
-  const n = parseFloat(s); return isFinite(n) ? n : null;
-}
-const toText = (cell) => cell == null ? "" : String(cell.w != null && cell.t !== "s" ? cell.w : cell.v ?? "").trim();
-function readSheet(ws, X, kind) {
-  if (!ws || !ws["!ref"]) return [];
-  const R = X.utils.decode_range(ws["!ref"]);
-  const cell = (r, c) => ws[X.utils.encode_cell({ r, c })];
-  let hdrRow = -1, hm = null;
-  for (let r = R.s.r; r <= Math.min(R.e.r, R.s.r + 15); r++) {
-    const row = []; for (let c = R.s.c; c <= R.e.c; c++) { const x = cell(r, c); row[c] = x ? x.v : ""; }
-    const h = headerMap(row);
-    if ("g" in h.map && ("s" in h.map || "prio" in h.map)) { hdrRow = r; hm = h; break; }
-  }
-  if (hdrRow < 0) return [];
-  const M = hm.map, out = [];
-  for (let r = hdrRow + 1; r <= R.e.r; r++) {
-    const get = (k) => (k in M ? cell(r, M[k]) : undefined);
-    const g = toText(get("g")), rt = toText(get("r"));
-    if (!g && !rt) continue;
-    let pos = parseCoord(toText(get("coord")));
-    if (!pos) { const la = toNum(get("lat")), lo = toNum(get("lon")); if (la != null && lo != null) pos = valid(la, lo); }
-    const links = [];
-    for (const lk of hm.links) {
-      const x = cell(r, lk.i); if (!x) continue;
-      const u = (x.l && x.l.Target) || (/^https?:\/\//i.test(String(x.v)) ? String(x.v).trim() : "");
-      if (u) links.push({ l: lk.l, u });
-    }
-    const bRaw = toText(get("b"));
-    const o = { s: toText(get("s")), g, r: rt, geb: toText(get("geb")), land: toText(get("land")), h: toNum(get("h")), hm: toNum(get("hm")),
-      sch: toText(get("sch")), sl: toNum(get("sl")), txt: toText(get("txt")), links, lat: pos ? pos.lat : null, lon: pos ? pos.lon : null };
-    if (kind === "tours") Object.assign(o, { d: toIsoDate(get("d"), X), km: toNum(get("km")), dur: toDur(get("dur")), p: toText(get("p")), v: toText(get("v")),
-      b: (bRaw.match(/★/g) || []).length || (parseInt(bRaw, 10) || 0), ok: toText(get("ok")), mt: toText(get("mt")), tage: toNum(get("tage")) });
-    else Object.assign(o, { prio: toText(get("prio")), zeit: toText(get("zeit")) });
-    for (const k of Object.keys(o)) if (o[k] === "" || o[k] == null || (Array.isArray(o[k]) && !o[k].length)) delete o[k];
-    out.push(o);
-  }
-  return out;
-}
-function findSheet(wb, names, kind) {
-  for (const n of names) { const hit = wb.SheetNames.find((s) => s.toLowerCase() === n); if (hit) return wb.Sheets[hit]; }
-  return kind === "tours" ? wb.Sheets[wb.SheetNames[0]] : null;
-}
-async function importExcel(file) {
-  $("loadBtn").disabled = true; setStatus("Lese Excel …");
-  try {
-    const X = await loadXlsx();
-    const wb = X.read(await readFile(file, false), { type: "array", cellDates: false, cellNF: false });
-    const tours = readSheet(findSheet(wb, ["tourenbuch", "touren"], "tours"), X, "tours");
-    const bucket = readSheet(findSheet(wb, ["bucketlist", "bucket", "wunschliste"], "bucket"), X, "bucket");
-    if (!tours.length && !bucket.length) throw new Error("Keine Touren gefunden. Erwartet wird ein Blatt »Tourenbuch« mit den Spalten Sportart und Gipfel / Ziel.");
-    const noPos = tours.filter((t) => t.lat == null).length + bucket.filter((t) => t.lat == null).length;
-    applyData(tours, bucket, { at: new Date().toISOString(), file: file.name });
-    fitAll();
-    setStatus(describeMeta());
-    toast(`${tours.length} Touren und ${bucket.length} Bucketlist-Ziele geladen${noPos ? ` · ${noPos} ohne Koordinaten` : ""}.`);
-  } catch (err) {
-    setStatus(err && err.message === "xlsx" ? "Der Excel-Leser konnte nicht geladen werden. Prüfe die Internetverbindung." : (err && err.message) || "Die Datei konnte nicht gelesen werden.", true);
-  } finally {
-    $("loadBtn").disabled = false;
-  }
-}
-function applyData(tours, bucket, meta) {
-  tours.forEach((t, i) => t._id = "t" + i);
-  bucket.forEach((b, i) => b._id = "b" + i);
-  state.tours = tours; state.bucket = bucket; state.meta = meta;
-  if (!lsSet(LS_DATA, JSON.stringify({ tours, bucket, meta }))) setStatus("Dieser Browser speichert nichts. Die Daten bleiben bis zum Schließen der Seite.", true);
-  render();
-}
-
-/* ===================== GPX ===================== */
-const GPX_COLS = ["d", "s", "g", "r", "geb", "land", "h", "hm", "km", "dur", "sch", "sl", "p", "v", "b", "ok", "txt", "lr", "lt", "lf", "coord", "mt", "tage"];
-let gpxItems = [];
-let lookupQueue = Promise.resolve();
-
+const hasPos = (o) => o && o.lat != null && o.lon != null && isFinite(o.lat) && isFinite(o.lon);
+const fmtCoord = (o) => hasPos(o) ? `${(+o.lat).toFixed(5)}, ${(+o.lon).toFixed(5)}` : "";
 function hav(a, b) {
   const R = 6371008.8, toR = Math.PI / 180;
   const dLat = (b.lat - a.lat) * toR, dLon = (b.lon - a.lon) * toR;
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * toR) * Math.cos(b.lat * toR) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
+function b64enc(str) {
+  const bytes = new TextEncoder().encode(str); let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function b64dec(b64) {
+  const bin = atob(String(b64).replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function numIn(v, int) {
+  if (v == null) return null;
+  let s = String(v).trim().replace(/\s|hm$|km$|m$/gi, "");
+  if (!s) return null;
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  s = s.replace(",", ".");
+  const n = Number(s); if (!isFinite(n)) return NaN;
+  return int ? Math.round(n) : Math.round(n * 10) / 10;
+}
+const numOut = (v) => v == null || v === "" ? "" : String(v).replace(".", ",");
+const durMin = (s) => { const m = /^(\d+):(\d{1,2})$/.exec(String(s || "").trim()); return m ? +m[1] * 60 + +m[2] : 0; };
+const minDur = (m) => m > 0 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}` : "";
+function durIn(v) {
+  const s = String(v ?? "").trim(); if (!s) return "";
+  const m = /^(\d+)\s*[:h]\s*(\d{1,2})$/.exec(s); if (m) return minDur(+m[1] * 60 + Math.min(59, +m[2]));
+  const n = Number(s.replace(",", ".")); if (isFinite(n)) return minDur(Math.round(n * 60));
+  return null;
+}
+function urlIn(v) { const s = String(v || "").trim(); if (!s) return ""; return /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : "https://" + s; }
+let toastT;
+function toast(msg) {
+  let t = document.querySelector(".toast");
+  if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3800);
+}
+// two-step confirmation on a button (the page has no dialogs)
+function armed(btn, label, ms = 4000) {
+  if (btn.dataset.armed === "1") { btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.label; return true; }
+  btn.dataset.label = btn.textContent; btn.dataset.armed = "1"; btn.classList.add("armed"); btn.textContent = label;
+  setTimeout(() => { if (btn.dataset.armed === "1") { btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.label; } }, ms);
+  return false;
+}
+
+/* ===================== state ===================== */
+const emptyData = () => ({ schema: 1, updated: "", tours: [], bucket: [] });
+const state = {
+  data: emptyData(), sha: null, token: lsGet(LS.token) || "", repo: lsGet(LS.repo) || DEFAULT_REPO,
+  lastSync: null, syncing: false, syncErr: "", view: "browse",
+  sportsOff: new Set(), year: "", land: "", mt: "", q: "", showBucket: true, tab: "tours"
+};
+function normalize(d) {
+  d = d && typeof d === "object" ? d : {};
+  const tours = Array.isArray(d.tours) ? d.tours.filter((x) => x && typeof x === "object") : [];
+  const bucket = Array.isArray(d.bucket) ? d.bucket.filter((x) => x && typeof x === "object") : [];
+  for (const t of tours) if (!t.id) t.id = uid("t");
+  for (const b of bucket) if (!b.id) b.id = uid("b");
+  return { schema: 1, updated: d.updated || "", tours, bucket };
+}
+
+/* ===================== GitHub storage ===================== */
+async function gh(path, opts = {}) {
+  const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${state.token}`, ...(opts.headers || {}) };
+  try { return await fetch(`https://api.github.com${path}`, { ...opts, headers, cache: "no-store" }); }
+  catch (e) { throw Object.assign(new Error("Keine Verbindung zu GitHub. Bist du online?"), { code: "offline" }); }
+}
+function ghError(r, what) {
+  if (r.status === 401) return Object.assign(new Error("Der Zugangsschlüssel ist ungültig oder abgelaufen. Unter Einstellungen → »Zugang ändern« einen neuen eintragen."), { code: "auth" });
+  if (r.status === 403) return Object.assign(new Error("GitHub verweigert den Zugriff. Der Schlüssel braucht für dieses Repository »Contents: Read and write«."), { code: "perm" });
+  if (r.status === 404) return Object.assign(new Error(`Repository »${state.repo}« nicht gefunden, oder der Schlüssel hat keinen Zugriff darauf.`), { code: "notfound" });
+  return new Error(`${what} fehlgeschlagen (GitHub meldet ${r.status}). Bitte gleich nochmal versuchen.`);
+}
+const filePath = () => `/repos/${state.repo}/contents/${FILE}`;
+async function fetchRemote() {
+  const r = await gh(filePath());
+  if (r.status === 404) {
+    const rr = await gh(`/repos/${state.repo}`);
+    if (!rr.ok) throw ghError(rr, "Laden");
+    return { data: emptyData(), sha: null };
+  }
+  if (!r.ok) throw ghError(r, "Laden");
+  const j = await r.json();
+  let text;
+  if (j.encoding === "base64" && j.content) text = b64dec(j.content);
+  else {
+    const r2 = await gh(filePath(), { headers: { Accept: "application/vnd.github.raw+json" } });
+    if (!r2.ok) throw ghError(r2, "Laden");
+    text = await r2.text();
+  }
+  let data;
+  try { data = JSON.parse(text); } catch (e) { throw new Error("Die Datei gipfelbuch.json ist beschädigt. Im Datenrepository unter »Commits« einen früheren Stand wiederherstellen."); }
+  return { data: normalize(data), sha: j.sha };
+}
+async function sync(quiet) {
+  if (!state.token || state.syncing) return false;
+  state.syncing = true; setSync("busy");
+  try {
+    const { data, sha } = await fetchRemote();
+    state.sha = sha; state.syncErr = ""; state.lastSync = Date.now();
+    setData(data);
+    return true;
+  } catch (e) {
+    state.syncErr = e.message; if (!quiet) toast(e.message);
+    return false;
+  } finally { state.syncing = false; setSync(); }
+}
+let saveChain = Promise.resolve();
+function mutate(fn, message) {
+  const run = saveChain.then(() => doMutate(fn, message));
+  saveChain = run.catch(() => {});
+  return run;
+}
+async function doMutate(fn, message) {
+  if (!state.token) throw new Error("Kein Zugang eingerichtet.");
+  setSync("busy", "Speichert …");
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const next = normalize(JSON.parse(JSON.stringify(state.data)));
+      fn(next);
+      next.updated = new Date().toISOString();
+      const body = { message, content: b64enc(JSON.stringify(next, null, 2) + "\n") };
+      if (state.sha) body.sha = state.sha;
+      const r = await gh(filePath(), { method: "PUT", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
+      if (r.ok) {
+        const j = await r.json();
+        state.sha = j.content && j.content.sha; state.syncErr = ""; state.lastSync = Date.now();
+        setData(next);
+        return next;
+      }
+      if (r.status === 409 || r.status === 422) { // changed on another device in the meantime: reload and apply again
+        const { data, sha } = await fetchRemote(); state.sha = sha; state.data = data;
+        continue;
+      }
+      throw ghError(r, "Speichern");
+    }
+    throw new Error("Speichern hat nach mehreren Versuchen nicht geklappt. Bitte nochmal probieren.");
+  } catch (e) {
+    state.syncErr = e.message; throw e;
+  } finally { setSync(); }
+}
+function setData(d) {
+  state.data = normalize(d);
+  lsSet(LS.cache, JSON.stringify({ data: state.data, sha: state.sha, repo: state.repo, at: state.lastSync }));
+  render();
+  if (state.view === "stats") renderStatsView();
+}
+function setSync(mode, text) {
+  const box = $("sync"), t = $("syncText");
+  box.classList.toggle("busy", mode === "busy"); box.classList.toggle("err", !!state.syncErr && mode !== "busy");
+  if (mode === "busy") { t.textContent = text || "Lädt …"; return; }
+  if (state.syncErr) t.innerHTML = `${esc(state.syncErr)} <button class="linkbtn" type="button" data-retry>Erneut versuchen</button>`;
+  else if (state.lastSync) t.textContent = `Gespeichert in GitHub · aktualisiert ${new Date(state.lastSync).toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" })}`;
+  else t.textContent = state.token ? "Noch nicht geladen" : "Kein Zugang eingerichtet";
+  $("setSync").textContent = state.syncErr || t.textContent;
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-retry]")) sync(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.token && Date.now() - (state.lastSync || 0) > 30000 && state.view !== "form") sync(true);
+});
+
+/* ===================== map ===================== */
+const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende';
+const bases = {
+  "Topo (OpenTopoMap)": L.tileLayer("https://tile.openmaps.fr/opentopomap/{z}/{x}/{y}.png", {
+    maxZoom: 17, maxNativeZoom: 16,
+    attribution: `Karte: <a href="https://openmaps.fr" target="_blank" rel="noopener">OpenTopoMap-R</a> (CC-BY-SA) · ${OSM}, SRTM`
+  }),
+  "Wanderkarte (OpenHikingMap)": L.tileLayer("https://tile.openmaps.fr/openhikingmap/{z}/{x}/{y}.png", {
+    maxZoom: 17, maxNativeZoom: 16, attribution: `Karte: <a href="https://openmaps.fr" target="_blank" rel="noopener">OpenHikingMap</a> · ${OSM}`
+  }),
+  "Schweiz (swisstopo)": L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg", {
+    maxZoom: 18, bounds: [[45.75, 5.85], [47.85, 10.55]], attribution: '© <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo</a>'
+  }),
+  "Satellit (Esri)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 18, attribution: "Bild: © Esri, Maxar, Earthstar Geographics"
+  })
+};
+(function topoFallback() {
+  const t = bases["Topo (OpenTopoMap)"]; let ok = 0, bad = 0, switched = false;
+  t.on("tileload", () => { ok++; });
+  t.on("tileerror", () => { bad++; if (!switched && ok === 0 && bad >= 6) { switched = true; t.setUrl("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"); } });
+})();
+const map = L.map("map", { zoomControl: true, minZoom: 3, maxZoom: 18, worldCopyJump: true }).setView([47.3, 12.5], 7);
+map.attributionControl.setPrefix(false);
+(bases[lsGet(LS.base)] || bases["Topo (OpenTopoMap)"]).addTo(map);
+L.control.layers(bases, null, { position: "topright", collapsed: true }).addTo(map);
+map.on("baselayerchange", (e) => lsSet(LS.base, e.name));
+L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
+const FitControl = L.Control.extend({
+  options: { position: "topleft" },
+  onAdd() {
+    const d = L.DomUtil.create("div", "leaflet-bar fitctl");
+    d.innerHTML = '<button type="button" title="Alle Punkte zeigen">Alle zeigen</button>';
+    L.DomEvent.disableClickPropagation(d);
+    d.firstChild.addEventListener("click", () => fitAll());
+    return d;
+  }
+});
+new FitControl().addTo(map);
+map.createPane("pts"); map.getPane("pts").style.zIndex = 450;
+const ptsR = L.canvas({ pane: "pts", padding: 0.4, tolerance: 6 });
+const stageLayer = L.layerGroup().addTo(map);
+const tourLayer = L.layerGroup().addTo(map);
+const bucketLayer = L.layerGroup().addTo(map);
+const previewLayer = L.layerGroup().addTo(map);
+const formLayer = L.layerGroup().addTo(map);
+let markerIndex = new Map();
+const syncLabels = () => $("map").classList.toggle("labels", map.getZoom() >= 12);
+map.on("zoomend", syncLabels); syncLabels();
+
+/* ===================== views ===================== */
+const VIEWS = ["setup", "browse", "gpx", "form", "stats", "settings"];
+function show(v) {
+  for (const x of VIEWS) $("v-" + x).hidden = x !== v;
+  state.view = v;
+  $("app").classList.toggle("tall", !["browse", "setup"].includes(v));
+  $("app").classList.toggle("setup", v === "setup");
+  map.closePopup();
+  if (v !== "form") { formLayer.clearLayers(); setPick(false); }
+  if (v === "gpx") drawPreview(true); else previewLayer.clearLayers();
+  if (v === "stats") renderStatsView();
+  if (v === "settings") renderSettings();
+  setTimeout(() => map.invalidateSize(), 80);
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-back]")) show("browse"); });
+
+/* ===================== filtering & browse ===================== */
+const tours = () => state.data.tours;
+const bucketItems = () => state.data.bucket;
+function filteredTours() {
+  const q = state.q.trim().toLowerCase();
+  return tours().filter((t) => {
+    if (state.sportsOff.has(t.s || "–")) return false;
+    if (state.year && String(t.d || "").slice(0, 4) !== state.year) return false;
+    if (state.land && (t.land || "") !== state.land) return false;
+    if (state.mt && (t.mt || "") !== state.mt) return false;
+    if (q && ![t.g, t.r, t.p, t.geb, t.land, t.txt, t.s, t.v, t.mt].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function bucketDone(b) {
+  const g = (b.g || "").trim().toLowerCase(), r = (b.r || "").trim().toLowerCase();
+  if (!g) return false;
+  return tours().some((t) => (t.g || "").trim().toLowerCase() === g && (!r || (t.r || "").toLowerCase().includes(r)) && t.ok !== "Nein");
+}
+function filteredBucket() {
+  const q = state.q.trim().toLowerCase();
+  return bucketItems().filter((b) => {
+    if (bucketDone(b) || state.mt) return false;
+    if (state.sportsOff.has(b.s || "–")) return false;
+    if (state.land && (b.land || "") !== state.land) return false;
+    if (q && ![b.g, b.r, b.geb, b.land, b.txt, b.s].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+const keyOf = (o) => `${(+o.lat).toFixed(4)},${(+o.lon).toFixed(4)}`;
+function sportsKnown() {
+  const set = new Set(SPORT_ORDER);
+  for (const t of tours()) if (t.s) set.add(t.s);
+  for (const b of bucketItems()) if (b.s) set.add(b.s);
+  return [...set];
+}
+function dayCount(list) { return new Set(list.map((t) => t.d).filter(Boolean)).size + list.reduce((a, t) => a + Math.max(0, (+t.tage || 1) - 1), 0); }
+
+function render() {
+  renderControls();
+  const T = filteredTours(), B = filteredBucket();
+  renderStats(T);
+  renderMarkers(T, B);
+  renderList(T, B);
+  $("newBtn").textContent = state.tab === "bucket" ? "+ Ziel" : "+ Tour von Hand";
+}
+function renderControls() {
+  const counts = {};
+  for (const t of tours()) counts[t.s || "–"] = (counts[t.s || "–"] || 0) + 1;
+  for (const b of bucketItems()) { const k = b.s || "–"; if (!(k in counts)) counts[k] = 0; }
+  const sports = Object.keys(counts).sort((a, b) => {
+    const ia = SPORT_ORDER.indexOf(a), ib = SPORT_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b, "de");
+  });
+  $("sports").innerHTML = sports.map((s) =>
+    `<button type="button" class="chip" data-s="${esc(s)}" aria-pressed="${!state.sportsOff.has(s)}" style="--c:${colorFor(s)}"><span class="dot"></span>${esc(s)}<span class="n">${counts[s]}</span></button>`
+  ).join("") || `<span class="status">Noch keine Touren</span>`;
+  const years = [...new Set(tours().map((t) => String(t.d || "").slice(0, 4)).filter(Boolean))].sort().reverse();
+  if (state.year && !years.includes(state.year)) state.year = "";
+  $("year").innerHTML = `<option value="">Alle Jahre</option>` + years.map((y) => `<option${y === state.year ? " selected" : ""}>${y}</option>`).join("");
+  const lands = [...new Set([...tours(), ...bucketItems()].map((t) => t.land).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  if (state.land && !lands.includes(state.land)) state.land = "";
+  $("land").innerHTML = `<option value="">Alle Länder</option>` + lands.map((l) => `<option${l === state.land ? " selected" : ""}>${esc(l)}</option>`).join("");
+  const mts = {};
+  for (const t of tours()) if (t.mt) mts[t.mt] = (mts[t.mt] || 0) + 1;
+  const mtNames = Object.keys(mts).sort((a, b) => a.localeCompare(b, "de"));
+  if (state.mt && !mtNames.includes(state.mt)) state.mt = "";
+  $("mt").hidden = !mtNames.length;
+  $("mt").innerHTML = `<option value="">Mehrtagestour: alle Touren</option>` + mtNames.map((n) => `<option value="${esc(n)}"${n === state.mt ? " selected" : ""}>${esc(n)} (${mts[n]})</option>`).join("");
+  $("tabTours").textContent = `Touren (${tours().length})`;
+  $("tabBucket").textContent = `Bucketlist (${bucketItems().filter((b) => !bucketDone(b)).length})`;
+}
+function renderStats(T) {
+  const peaks = new Set(T.filter((t) => t.ok !== "Nein").map((t) => (t.g || "").toLowerCase()).filter(Boolean));
+  const hm = T.reduce((a, t) => a + (+t.hm || 0), 0);
+  const km = T.reduce((a, t) => a + (+t.km || 0), 0);
+  const days = dayCount(T);
+  $("stats").innerHTML = `<span><b>${nf.format(T.length)}</b> Touren</span><span><b>${nf.format(peaks.size)}</b> Gipfel</span>` +
+    (days ? `<span><b>${nf.format(days)}</b> Tage</span>` : "") +
+    `<span><b>${nf.format(Math.round(hm))}</b> Hm</span>` + (km ? `<span><b>${nf.format(Math.round(km))}</b> km</span>` : "");
+}
+function renderMarkers(T, B) {
+  tourLayer.clearLayers(); bucketLayer.clearLayers(); stageLayer.clearLayers(); markerIndex = new Map();
+  const stages = {};
+  for (const t of T) if (t.mt && hasPos(t)) (stages[t.mt] = stages[t.mt] || []).push(t);
+  for (const list of Object.values(stages)) {
+    list.sort((a, b) => String(a.d || "").localeCompare(String(b.d || "")));
+    const ll = [];
+    for (const t of list) { const p = [+t.lat, +t.lon]; const last = ll[ll.length - 1]; if (!last || last[0] !== p[0] || last[1] !== p[1]) ll.push(p); }
+    if (ll.length > 1) stageLayer.addLayer(L.polyline(ll, { color: "#24364A", weight: 3, opacity: 0.85, dashArray: "2 7", lineCap: "round", interactive: false }));
+  }
+  const groups = new Map();
+  for (const t of T) { if (!hasPos(t)) continue; const k = keyOf(t); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+  for (const visits of groups.values()) {
+    visits.sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")));
+    const latest = visits[0];
+    const m = L.circleMarker([+latest.lat, +latest.lon], {
+      renderer: ptsR, radius: Math.min(12, 7.5 + (visits.length - 1) * 1.5), color: "#FFFFFF", weight: 2.5,
+      fillColor: colorFor(latest.s), fillOpacity: visits.every((v) => v.ok === "Nein") ? 0.5 : 1
+    });
+    const ids = visits.map((v) => v.id);
+    m.bindPopup(() => tourPopup(ids), { maxWidth: 360, autoPanPadding: [24, 24] });
+    m.bindTooltip(esc(latest.g || latest.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
+    tourLayer.addLayer(m);
+    for (const v of visits) markerIndex.set(v.id, m);
+  }
+  if (!state.showBucket) return;
+  for (const b of B) {
+    if (!hasPos(b)) continue;
+    const m = L.circleMarker([+b.lat, +b.lon], { renderer: ptsR, radius: 8, color: colorFor(b.s), weight: 3, dashArray: "3 3", fillColor: "#FFFFFF", fillOpacity: 0.9 });
+    const id = b.id;
+    m.bindPopup(() => bucketPopup(id), { maxWidth: 360, autoPanPadding: [24, 24] });
+    m.bindTooltip(esc(b.g || b.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
+    bucketLayer.addLayer(m);
+    markerIndex.set(b.id, m);
+  }
+}
+const stars = (n) => { n = +n || 0; return n ? `<span class="stars" aria-label="${n} von 5 Sternen">${"★".repeat(n)}</span>` : ""; };
+function linkHtml(o) {
+  return [["lr", "Route"], ["lt", "Track"], ["lf", "Fotos"]].filter(([k]) => /^https?:\/\//i.test(o[k] || ""))
+    .map(([k, l]) => `<a href="${esc(o[k])}" target="_blank" rel="noopener">${l} ↗</a>`).join("");
+}
+function stageLine(v) {
+  const dates = [...new Set(tours().filter((t) => t.mt === v.mt).map((t) => t.d).filter(Boolean))].sort();
+  const i = dates.indexOf(v.d);
+  return `<div class="mtline">↔ <button class="linkbtn" type="button" data-mtf="${esc(v.mt)}">${esc(v.mt)}</button>${i >= 0 && dates.length > 1 ? ` · Tag ${i + 1} von ${dates.length}` : ""}</div>`;
+}
+function tourPopup(ids) {
+  const visits = ids.map((id) => tours().find((t) => t.id === id)).filter(Boolean);
+  if (!visits.length) return "";
+  const t = visits[0];
+  const head = [t.h ? nf.format(t.h) + " m" : "", t.geb, t.land].filter(Boolean).join(" · ");
+  let html = `<div class="pp"><h3>${esc(t.g || t.r || "Ohne Namen")}</h3><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
+  for (const v of visits) {
+    const facts = [+v.tage > 1 && `${v.tage} Tage`, v.sch && `Grad ${v.sch}`, v.sl && `${v.sl} SL`, v.hm && `${nf.format(v.hm)} Hm`, v.km && `${nf1.format(v.km)} km`, v.dur && `${v.dur} h`].filter(Boolean).join(" · ");
+    html += `<div class="visit">
+      ${v.mt ? stageLine(v) : ""}
+      <div class="vhead"><span>${esc(fmtDate(v.d))}</span><span class="tag" style="--c:${colorFor(v.s)}">${esc(v.s || "–")}</span>${stars(v.b)}${v.ok === "Nein" ? '<span class="pill no">Umkehr</span>' : ""}</div>
+      ${v.r ? `<div class="vroute">${esc(v.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
+      ${v.p ? `<div class="vfacts">mit ${esc(v.p)}</div>` : ""}${v.v ? `<div class="vfacts">${esc(v.v)}</div>` : ""}
+      ${v.txt ? `<div class="vtxt">${esc(v.txt)}</div>` : ""}
+      <div class="links">${linkHtml(v)}<button class="linkbtn" type="button" data-edit-t="${esc(v.id)}">Bearbeiten</button></div>
+    </div>`;
+  }
+  const la = (+t.lat).toFixed(5), lo = (+t.lon).toFixed(5);
+  return html + `<div class="coords"><span>${la}, ${lo}</span><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div></div>`;
+}
+function bucketPopup(id) {
+  const b = bucketItems().find((x) => x.id === id); if (!b) return "";
+  const head = [b.h ? nf.format(b.h) + " m" : "", b.geb, b.land].filter(Boolean).join(" · ");
+  const facts = [b.sch && `Grad ${b.sch}`, b.sl && `${b.sl} SL`, b.hm && `${nf.format(b.hm)} Hm`, b.zeit && `Beste Zeit: ${b.zeit}`].filter(Boolean).join(" · ");
+  const la = (+b.lat).toFixed(5), lo = (+b.lon).toFixed(5);
+  return `<div class="pp"><h3>${esc(b.g || b.r || "Ziel")}</h3><div class="sub">${esc(head)}</div>
+    <div class="visit"><div class="vhead"><span class="pill goal">Bucketlist${b.prio ? " · " + esc(b.prio) : ""}</span><span class="tag" style="--c:${colorFor(b.s)}">${esc(b.s || "–")}</span></div>
+    ${b.r ? `<div class="vroute">${esc(b.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
+    ${b.txt ? `<div class="vtxt">${esc(b.txt)}</div>` : ""}
+    <div class="links">${linkHtml(b)}<button class="linkbtn" type="button" data-edit-b="${esc(b.id)}">Bearbeiten</button><button class="linkbtn" type="button" data-done-b="${esc(b.id)}">Geschafft – als Tour eintragen</button></div></div>
+    <div class="coords"><span>${la}, ${lo}</span><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div></div>`;
+}
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-mtf]");
+  if (a) { e.preventDefault(); state.mt = a.dataset.mtf; if (state.view !== "browse") show("browse"); map.closePopup(); render(); fitAll(); return; }
+  const et = e.target.closest("[data-edit-t]"); if (et) { openForm("tour", et.dataset.editT); return; }
+  const eb = e.target.closest("[data-edit-b]"); if (eb) { openForm("bucket", eb.dataset.editB); return; }
+  const db = e.target.closest("[data-done-b]"); if (db) { openFormFromBucket(db.dataset.doneB); return; }
+});
+function renderList(T, B) {
+  const box = $("list");
+  if (state.tab === "tours") {
+    if (!tours().length) {
+      box.innerHTML = `<div class="empty pad"><b>Dein Gipfelbuch ist noch leer</b><span>Lege die erste Tour an: »GPX importieren« wertet einen Track aus, »+ Tour von Hand« öffnet ein Formular. Bestehende Excel-Listen übernimmst du unter Einstellungen → Excel importieren.</span></div>`;
+      return;
+    }
+    if (!T.length) { box.innerHTML = `<div class="empty pad"><b>Keine Treffer</b><span>Kein Eintrag passt zu den Filtern.</span></div>`; return; }
+    const sorted = [...T].sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")));
+    const byYear = {};
+    for (const t of sorted) { const y = String(t.d || "").slice(0, 4) || "Ohne Datum"; (byYear[y] = byYear[y] || []).push(t); }
+    let html = "", cur = null;
+    for (const t of sorted) {
+      const y = String(t.d || "").slice(0, 4) || "Ohne Datum";
+      if (y !== cur) { cur = y; html += `<div class="year">${esc(y)}<span>${byYear[y].length} Touren · ${nf.format(byYear[y].reduce((a, x) => a + (+x.hm || 0), 0))} Hm</span></div>`; }
+      const meta = [fmtDate(t.d), +t.tage > 1 && `${t.tage} Tage`, t.s, t.r, t.sch, t.mt && `↔ ${t.mt}`].filter(Boolean).join(" · ") + (!hasPos(t) ? " · ohne Koordinaten" : "");
+      html += `<button type="button" class="item${t.ok === "Nein" ? " turned" : ""}" data-id="${esc(t.id)}" data-kind="tour" style="--c:${colorFor(t.s)}">
+        <span class="dot"></span><span class="t">${esc(t.g || t.r || "Ohne Namen")}</span><span class="r">${t.hm ? nf.format(t.hm) + " Hm" : ""}</span>
+        <span class="meta">${esc(meta)}</span></button>`;
+    }
+    box.innerHTML = html;
+  } else {
+    if (!bucketItems().length) { box.innerHTML = `<div class="empty pad"><b>Noch keine Ziele</b><span>Mit »+ Ziel« trägst du Gipfel und Routen ein, die du noch machen willst. Erledigte Ziele verschwinden hier automatisch.</span></div>`; return; }
+    if (!B.length) { box.innerHTML = `<div class="empty pad"><b>Keine offenen Ziele</b><span>Alle Ziele sind erledigt oder passen nicht zu den Filtern.</span></div>`; return; }
+    const prio = { "Hoch": 0, "Mittel": 1, "Irgendwann": 2 };
+    const sorted = [...B].sort((a, b) => (prio[a.prio] ?? 3) - (prio[b.prio] ?? 3) || (a.g || "").localeCompare(b.g || "", "de"));
+    let html = "", cur = null;
+    for (const b of sorted) {
+      const p = b.prio || "Ohne Priorität";
+      if (p !== cur) { cur = p; html += `<div class="year">${esc(p)}<span></span></div>`; }
+      const meta = [b.s, b.r, b.sch, b.zeit].filter(Boolean).join(" · ") + (!hasPos(b) ? " · ohne Koordinaten" : "");
+      html += `<button type="button" class="item" data-id="${esc(b.id)}" data-kind="bucket" style="--c:${colorFor(b.s)}">
+        <span class="dot ring"></span><span class="t">${esc(b.g || b.r)}</span><span class="r">${b.h ? nf.format(b.h) + " m" : ""}</span>
+        <span class="meta">${esc(meta)}</span></button>`;
+    }
+    box.innerHTML = html;
+  }
+}
+function fitAll() {
+  const b = L.latLngBounds([]);
+  for (const lg of [tourLayer, bucketLayer, previewLayer, formLayer]) lg.eachLayer((m) => { if (m.getLatLng) b.extend(m.getLatLng()); else if (m.getBounds) b.extend(m.getBounds()); });
+  if (!b.isValid()) return;
+  if (b.getNorthEast().equals(b.getSouthWest())) map.setView(b.getCenter(), 12);
+  else map.fitBounds(b, { padding: [40, 40], maxZoom: 13 });
+}
+
+$("sports").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  const s = b.dataset.s, all = [...$("sports").querySelectorAll(".chip")].map((x) => x.dataset.s);
+  if (state.sportsOff.size === 0 && all.length > 1) all.forEach((x) => x !== s && state.sportsOff.add(x));
+  else if (state.sportsOff.has(s)) state.sportsOff.delete(s);
+  else { state.sportsOff.add(s); if (state.sportsOff.size === all.length) state.sportsOff.clear(); }
+  render();
+});
+$("year").addEventListener("change", (e) => { state.year = e.target.value; render(); });
+$("land").addEventListener("change", (e) => { state.land = e.target.value; render(); });
+$("mt").addEventListener("change", (e) => { state.mt = e.target.value; render(); if (state.mt) fitAll(); });
+let qT; $("q").addEventListener("input", (e) => { clearTimeout(qT); qT = setTimeout(() => { state.q = e.target.value; render(); }, 150); });
+$("showBucket").addEventListener("change", (e) => { state.showBucket = e.target.checked; render(); });
+function setTab(t) { state.tab = t; $("tabTours").setAttribute("aria-selected", t === "tours"); $("tabBucket").setAttribute("aria-selected", t === "bucket"); render(); }
+$("tabTours").addEventListener("click", () => setTab("tours"));
+$("tabBucket").addEventListener("click", () => setTab("bucket"));
+$("list").addEventListener("click", (e) => {
+  const it = e.target.closest(".item"); if (!it) return;
+  const m = markerIndex.get(it.dataset.id);
+  if (!m) { openForm(it.dataset.kind, it.dataset.id); return; }
+  document.querySelectorAll(".item.active").forEach((x) => x.classList.remove("active"));
+  it.classList.add("active");
+  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 });
+  map.once("moveend", () => m.openPopup());
+});
+$("statsBtn").addEventListener("click", () => show("stats"));
+$("settingsBtn").addEventListener("click", () => show("settings"));
+$("newBtn").addEventListener("click", () => openForm(state.tab === "bucket" ? "bucket" : "tour", null));
+$("gpxBtn").addEventListener("click", () => { show("gpx"); if (!gpxItems.length) setTimeout(() => $("gpxFile").click(), 0); });
+
+/* ===================== forms ===================== */
+const TOUR_FIELDS = [
+  ["sec", "Tour"], ["d", "Datum (erster Tag)", "date"], ["tage", "Tage", "int"], ["s", "Sportart", "sport"], ["ok", "Gipfel erreicht", "ok"],
+  ["g", "Gipfel / Ziel", "peak", "full"], ["r", "Route", "text", "full"], ["geb", "Gebirgsgruppe", "text"], ["land", "Land", "text"],
+  ["sec", "Zahlen"], ["h", "Gipfelhöhe (m)", "int"], ["hm", "Höhenmeter", "int"], ["km", "Distanz (km)", "num"], ["dur", "Dauer (h:mm)", "dur"],
+  ["sch", "Schwierigkeit", "grade"], ["sl", "Seillängen", "int"],
+  ["sec", "Erlebnis"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"], ["v", "Verhältnisse / Wetter", "text", "full"], ["txt", "Beschreibung", "area", "full"],
+  ["sec", "Links"], ["lr", "Routenbeschreibung", "url", "full"], ["lt", "Track (Suunto, Strava …)", "url", "full"], ["lf", "Fotos", "url", "full"],
+  ["sec", "Ort und Mehrtagestour"], ["coord", "Koordinaten", "coord", "full"], ["mt", "Mehrtagestour (Name)", "mt", "full"]
+];
+const BUCKET_FIELDS = [
+  ["sec", "Ziel"], ["prio", "Priorität", "prio"], ["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak", "full"], ["r", "Route", "text", "full"],
+  ["geb", "Gebirgsgruppe", "text"], ["land", "Land", "text"], ["h", "Gipfelhöhe (m)", "int"], ["hm", "Höhenmeter", "int"],
+  ["sch", "Schwierigkeit", "grade"], ["sl", "Seillängen", "int"], ["zeit", "Beste Zeit", "text", "full"], ["txt", "Notizen", "area", "full"],
+  ["lr", "Link Routenbeschreibung", "url", "full"], ["sec", "Ort"], ["coord", "Koordinaten", "coord", "full"]
+];
+let form = null; // { kind, obj, isNew }
+function fieldHtml(o, [k, label, type, w], prefix = "f") {
+  if (k === "sec") return `<h3 class="sec">${esc(label)}</h3>`;
+  const id = `${prefix}-${k}`;
+  const val = k === "coord" ? fmtCoord(o) : o[k];
+  let input;
+  if (type === "sport") {
+    const list = sportsKnown(); const v = val || "";
+    input = `<select id="${id}" data-k="${k}"><option value="">– wählen –</option>${list.map((s) => `<option${s === v ? " selected" : ""}>${esc(s)}</option>`).join("")}${v && !list.includes(v) ? `<option selected>${esc(v)}</option>` : ""}<option value="__neu">Andere Sportart …</option></select>`;
+  } else if (type === "stars") input = `<select id="${id}" data-k="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}"${+val === n ? " selected" : ""}>${"★".repeat(n)}</option>`).join("")}</select>`;
+  else if (type === "ok") input = `<select id="${id}" data-k="${k}">${["Ja", "Nein", "–"].map((x) => `<option${x === (val || "Ja") ? " selected" : ""}>${x}</option>`).join("")}</select>`;
+  else if (type === "prio") input = `<select id="${id}" data-k="${k}">${["Hoch", "Mittel", "Irgendwann"].map((x) => `<option${x === (val || "Mittel") ? " selected" : ""}>${x}</option>`).join("")}</select>`;
+  else if (type === "area") input = `<textarea id="${id}" data-k="${k}" rows="3">${esc(val)}</textarea>`;
+  else if (type === "date") input = `<input id="${id}" data-k="${k}" type="date" value="${esc(val || "")}">`;
+  else if (type === "int" || type === "num") input = `<input id="${id}" data-k="${k}" type="text" inputmode="decimal" value="${esc(numOut(val))}">`;
+  else if (type === "dur") input = `<input id="${id}" data-k="${k}" type="text" inputmode="numeric" placeholder="5:30" value="${esc(val || "")}">`;
+  else if (type === "grade") input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(val || "")}" autocomplete="off"><datalist id="${id}-dl">${(GRADES[o.s] || []).map((g) => `<option value="${esc(g)}"></option>`).join("")}</datalist>`;
+  else if (type === "mt") {
+    const names = [...new Set(tours().map((t) => t.mt).filter(Boolean))];
+    input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(val || "")}" placeholder="nur bei mehrtägigen Touren" autocomplete="off"><datalist id="${id}-dl">${names.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>`;
+  } else if (type === "peak") {
+    input = `<div class="inline"><input id="${id}" data-k="${k}" type="text" value="${esc(val || "")}" autocomplete="off"><button class="btn" type="button" data-peaksearch="${prefix}">Suchen</button></div><div class="results" id="${prefix}-results"></div>`;
+  } else if (type === "coord") {
+    input = `<div class="inline"><input id="${id}" data-k="${k}" type="text" placeholder="47.07472, 12.69389" value="${esc(val)}" autocomplete="off"><button class="btn" type="button" data-pick="${prefix}">Auf Karte</button></div>`;
+  } else input = `<input id="${id}" data-k="${k}" type="${type === "url" ? "url" : "text"}" value="${esc(val || "")}"${type === "url" ? ' placeholder="https://…"' : ""}>`;
+  const tag = type === "peak" || type === "coord" ? "div" : "label";
+  return `<${tag} class="field${w === "full" || type === "peak" || type === "coord" ? " full" : ""}"${tag === "label" ? ` for="${id}"` : ""}><span>${esc(label)}</span>${input}</${tag}>`;
+}
+function openForm(kind, id, preset) {
+  const list = kind === "tour" ? tours() : bucketItems();
+  const existing = id ? list.find((x) => x.id === id) : null;
+  const obj = existing ? JSON.parse(JSON.stringify(existing)) : (preset || (kind === "tour" ? { d: todayIso(), ok: "Ja" } : { prio: "Mittel" }));
+  form = { kind, obj, isNew: !existing };
+  $("formTitle").textContent = kind === "tour" ? (existing ? "Tour bearbeiten" : "Neue Tour") : (existing ? "Ziel bearbeiten" : "Neues Bucketlist-Ziel");
+  const defs = kind === "tour" ? TOUR_FIELDS : BUCKET_FIELDS;
+  $("formBody").innerHTML = `<div class="fields">${defs.map((f) => fieldHtml(obj, f)).join("")}</div>`;
+  const del = $("formDelete"); del.hidden = !existing; del.dataset.armed = ""; del.classList.remove("armed"); del.textContent = "Löschen";
+  $("formStatus").textContent = ""; $("formStatus").classList.remove("err");
+  $("formSave").disabled = false;
+  show("form");
+  updateFormMarker(true);
+  $("formBody").parentElement.scrollTop = 0;
+}
+function openFormFromBucket(bid) {
+  const b = bucketItems().find((x) => x.id === bid); if (!b) return;
+  const preset = { d: todayIso(), ok: "Ja" };
+  for (const k of ["s", "g", "r", "geb", "land", "h", "hm", "sch", "sl", "lr", "lat", "lon"]) if (b[k] != null && b[k] !== "") preset[k] = b[k];
+  openForm("tour", null, preset);
+}
+function readForm() {
+  const defs = form.kind === "tour" ? TOUR_FIELDS : BUCKET_FIELDS;
+  const o = { ...form.obj }, errs = [];
+  for (const [k, label, type] of defs) {
+    if (k === "sec") continue;
+    const el = $(`f-${k}`); if (!el) continue;
+    const raw = el.value;
+    if (type === "int" || type === "num") { const n = numIn(raw, type === "int"); if (Number.isNaN(n)) errs.push(`${label}: keine Zahl`); else if (n == null) delete o[k]; else o[k] = n; }
+    else if (type === "dur") { const d = durIn(raw); if (d === null) errs.push(`${label}: bitte als Stunden:Minuten, z. B. 5:30`); else if (!d) delete o[k]; else o[k] = d; }
+    else if (type === "stars") { if (raw) o[k] = +raw; else delete o[k]; }
+    else if (type === "coord") {
+      const c = parseCoord(raw);
+      if (raw.trim() && !c) errs.push("Koordinaten: bitte als Breite, Länge, z. B. 47.07472, 12.69389");
+      if (c) { o.lat = c.lat; o.lon = c.lon; } else { delete o.lat; delete o.lon; }
+    }
+    else if (type === "url") { const u = urlIn(raw); if (u) o[k] = u; else delete o[k]; }
+    else if (type === "sport") { if (raw && raw !== "__neu") o[k] = raw.trim(); else delete o[k]; }
+    else { const v = raw.trim(); if (v) o[k] = v; else delete o[k]; }
+  }
+  if (!o.g && !o.r) errs.push("Bitte Gipfel / Ziel oder Route angeben.");
+  if (!o.s) errs.push("Bitte eine Sportart wählen.");
+  return { o, errs };
+}
+$("formBody").addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.dataset.k === "s" && el.value === "__neu") {
+    const wrap = el.closest(".field");
+    wrap.innerHTML = `<span>Sportart</span><input id="f-s" data-k="s" type="text" placeholder="z. B. Eisklettern" autocomplete="off">`;
+    $("f-s").focus(); return;
+  }
+  if (el.dataset.k === "s") { form.obj.s = el.value; const dl = $("f-sch-dl"); if (dl) dl.innerHTML = (GRADES[el.value] || []).map((g) => `<option value="${esc(g)}"></option>`).join(""); }
+  if (el.dataset.k === "coord") updateFormMarker(true);
+});
+$("formBody").addEventListener("input", (e) => { if (e.target.dataset.k === "coord") updateFormMarker(false); });
+function updateFormMarker(fly) {
+  formLayer.clearLayers();
+  const el = $("f-coord"); if (!el) return;
+  const c = parseCoord(el.value); if (!c) return;
+  const m = L.marker([c.lat, c.lon], { draggable: true, icon: L.divIcon({ className: "", html: '<div class="pin"></div>', iconSize: [22, 22], iconAnchor: [11, 24] }) });
+  m.on("dragend", () => { const p = m.getLatLng(); el.value = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`; });
+  formLayer.addLayer(m);
+  if (fly) map.setView([c.lat, c.lon], Math.max(map.getZoom(), 12));
+}
+let pickTarget = null;
+function setPick(on, target) {
+  pickTarget = on ? target : null;
+  $("pickHint").hidden = !on; $("map").classList.toggle("picking", !!on);
+}
+$("pickCancel").addEventListener("click", () => setPick(false));
+map.on("click", (e) => {
+  if (!pickTarget) return;
+  const el = $(`${pickTarget}-coord`);
+  const v = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  if (el) { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); }
+  if (pickTarget === "f") updateFormMarker(false);
+  setPick(false);
+});
+document.addEventListener("click", (e) => {
+  const p = e.target.closest("[data-pick]"); if (p) { setPick(true, p.dataset.pick); toast("Tippe jetzt auf die Karte."); return; }
+  const s = e.target.closest("[data-peaksearch]"); if (s) { peakSearch(s.dataset.peaksearch); return; }
+  const r = e.target.closest("[data-peakpick]"); if (r) { applyPeakResult(r); return; }
+});
+const lastResults = {};
+async function peakSearch(prefix) {
+  const inp = $(`${prefix}-g`), box = $(`${prefix}-results`);
+  const q = inp.value.trim();
+  if (!q) { box.innerHTML = `<span class="note">Erst einen Namen eintippen, z. B. Großglockner.</span>`; return; }
+  box.innerHTML = `<span class="note">Suche in OpenStreetMap …</span>`;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=1&extratags=1&accept-language=de&q=${encodeURIComponent(q)}`);
+    if (!r.ok) throw new Error();
+    const list = (await r.json()).map((x) => ({
+      name: x.name || (x.display_name || "").split(",")[0], lat: +x.lat, lon: +x.lon,
+      ele: x.extratags && x.extratags.ele ? Math.round(parseFloat(String(x.extratags.ele).replace(",", "."))) || null : null,
+      country: (x.address && x.address.country) || "", peak: x.category === "natural" && /peak|volcano/.test(x.type || ""),
+      where: [x.address && (x.address.county || x.address.state), x.address && x.address.country].filter(Boolean).join(", "), type: x.type
+    })).sort((a, b) => (b.peak - a.peak));
+    lastResults[prefix] = list;
+    if (!list.length) { box.innerHTML = `<span class="note">Nichts gefunden. Anders schreiben oder den Punkt »Auf Karte« setzen.</span>`; return; }
+    box.innerHTML = list.slice(0, 6).map((x, i) => `<button type="button" data-peakpick="${i}" data-prefix="${prefix}">${esc(x.name)}${x.ele ? " · " + nf.format(x.ele) + " m" : ""}<small>${esc(x.peak ? "Gipfel" : x.type || "")}${x.where ? " · " + esc(x.where) : ""}</small></button>`).join("");
+  } catch (e) {
+    box.innerHTML = `<span class="note">Suche gerade nicht möglich (keine Verbindung zu OpenStreetMap).</span>`;
+  }
+}
+function applyPeakResult(btn) {
+  const prefix = btn.dataset.prefix, x = (lastResults[prefix] || [])[+btn.dataset.peakpick]; if (!x) return;
+  const set = (k, v) => { const el = $(`${prefix}-${k}`); if (el && v != null && v !== "") { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); } };
+  set("g", x.name); set("coord", `${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}`);
+  if (x.ele) set("h", numOut(x.ele));
+  if (x.country) set("land", x.country);
+  $(`${prefix}-results`).innerHTML = "";
+  if (prefix === "f") updateFormMarker(true);
+}
+$("formSave").addEventListener("click", async () => {
+  const { o, errs } = readForm();
+  const st = $("formStatus");
+  if (errs.length) { st.textContent = errs.join(" · "); st.classList.add("err"); return; }
+  const kind = form.kind, isNew = form.isNew;
+  if (!o.id) o.id = uid(kind === "tour" ? "t" : "b");
+  if (isNew) o.created = new Date().toISOString();
+  o.changed = new Date().toISOString();
+  $("formSave").disabled = true; st.classList.remove("err"); st.textContent = "Speichert …";
+  const label = kind === "tour" ? `Tour ${isNew ? "neu" : "geändert"}: ${o.g || o.r}${o.d ? " (" + fmtDate(o.d) + ")" : ""}` : `Ziel ${isNew ? "neu" : "geändert"}: ${o.g || o.r}`;
+  try {
+    await mutate((d) => {
+      const list = kind === "tour" ? d.tours : d.bucket;
+      const i = list.findIndex((x) => x.id === o.id);
+      if (i >= 0) list[i] = o; else list.push(o);
+    }, label);
+    toast("Gespeichert.");
+    show("browse");
+    if (kind === "bucket" && state.tab !== "bucket") setTab("bucket");
+    const m = markerIndex.get(o.id);
+    if (m) { map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.6 }); map.once("moveend", () => m.openPopup()); }
+  } catch (e) {
+    st.textContent = e.message + " Deine Eingaben bleiben erhalten."; st.classList.add("err"); $("formSave").disabled = false;
+  }
+});
+$("formDelete").addEventListener("click", async () => {
+  const btn = $("formDelete");
+  if (!armed(btn, "Wirklich löschen?")) return;
+  const { kind, obj } = form;
+  btn.disabled = true;
+  try {
+    await mutate((d) => {
+      if (kind === "tour") d.tours = d.tours.filter((x) => x.id !== obj.id); else d.bucket = d.bucket.filter((x) => x.id !== obj.id);
+    }, `${kind === "tour" ? "Tour" : "Ziel"} gelöscht: ${obj.g || obj.r}${obj.d ? " (" + fmtDate(obj.d) + ")" : ""}`);
+    toast("Gelöscht."); show("browse");
+  } catch (e) { $("formStatus").textContent = e.message; $("formStatus").classList.add("err"); }
+  finally { btn.disabled = false; }
+});
+
+/* ===================== GPX ===================== */
+let gpxItems = [];
+let gpxSeq = 0;
+let lookupQueue = Promise.resolve();
 function parseGpx(text) {
   const doc = new DOMParser().parseFromString(text, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) throw new Error("Keine gültige GPX-Datei.");
   const byTag = (el, tag) => el.getElementsByTagNameNS ? el.getElementsByTagNameNS("*", tag) : el.getElementsByTagName(tag);
   const first = (el, tag) => { const x = byTag(el, tag)[0]; return x ? x.textContent.trim() : ""; };
-  let nodes = byTag(doc, "trkpt");
-  if (!nodes.length) nodes = byTag(doc, "rtept");
+  let nodes = byTag(doc, "trkpt"); if (!nodes.length) nodes = byTag(doc, "rtept");
   const pts = [];
   for (const n of nodes) {
     const lat = parseFloat(n.getAttribute("lat")), lon = parseFloat(n.getAttribute("lon"));
@@ -791,37 +1159,31 @@ function parseGpx(text) {
     pts.push({ lat, lon, ele: isFinite(ele) ? ele : null, t: isFinite(t) ? t : null });
   }
   const trk = byTag(doc, "trk")[0];
-  const name = (trk && first(trk, "name")) || first(doc, "name");
-  const type = (trk && first(trk, "type")) || first(doc, "type");
-  return { pts, name, type };
+  return { pts, name: (trk && first(trk, "name")) || first(doc, "name"), type: (trk && first(trk, "type")) || first(doc, "type") };
 }
 function analyzeTrack(pts) {
   const TH = 3; // metres of hysteresis against elevation noise
-  let dist = 0, gain = 0, loss = 0, ref = null, top = null, prev = null, t0 = null, t1 = null;
+  let dist = 0, gain = 0, ref = null, top = null, prev = null, t0 = null, t1 = null;
   for (const p of pts) {
     if (prev) dist += hav(prev, p);
     prev = p;
     if (p.ele != null) {
       if (ref == null) ref = p.ele;
       const d = p.ele - ref;
-      if (d >= TH) { gain += d; ref = p.ele; } else if (d <= -TH) { loss -= d; ref = p.ele; }
+      if (d >= TH) { gain += d; ref = p.ele; } else if (d <= -TH) ref = p.ele;
       if (!top || p.ele > top.ele) top = p;
     }
     if (p.t != null) { if (t0 == null || p.t < t0) t0 = p.t; if (t1 == null || p.t > t1) t1 = p.t; }
   }
-  if (!top && pts.length) { // no elevation: use the point farthest from the start
-    let far = 0; for (const p of pts) { const d = hav(pts[0], p); if (d >= far) { far = d; top = p; } }
-  }
+  if (!top && pts.length) { let far = 0; for (const p of pts) { const d = hav(pts[0], p); if (d >= far) { far = d; top = p; } } }
   const start = t0 != null ? new Date(t0) : null;
   const pad = (n) => String(n).padStart(2, "0");
-  const mins = t0 != null && t1 != null ? Math.round((t1 - t0) / 60000) : null;
+  const mins = t0 != null && t1 != null ? Math.round((t1 - t0) / 60000) : 0;
   return {
     d: start ? `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}` : "",
     startTime: start ? `${pad(start.getHours())}:${pad(start.getMinutes())}` : "",
-    dur: mins != null && mins > 0 ? `${Math.floor(mins / 60)}:${pad(mins % 60)}` : "",
-    km: Math.round(dist / 100) / 10,
+    dur: minDur(mins), km: Math.round(dist / 100) / 10,
     hm: pts.some((p) => p.ele != null) ? Math.round(gain) : null,
-    down: Math.round(loss),
     top: top ? { lat: top.lat, lon: top.lon, ele: top.ele != null ? Math.round(top.ele) : null } : null
   };
 }
@@ -852,31 +1214,14 @@ async function countryOf(lat, lon) {
   const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=3&accept-language=de`);
   return (d && d.address && d.address.country) || "";
 }
-
-function openGpx() {
-  $("browseView").hidden = true; $("gpxView").hidden = false;
-  document.querySelector(".app").classList.add("gpx-mode"); setTimeout(() => map.invalidateSize(), 50);
-  map.closePopup();
-  if (!gpxItems.length) setTimeout(() => $("gpxFile").click(), 0);
-}
-function closeGpx() {
-  $("gpxView").hidden = true; $("browseView").hidden = false;
-  document.querySelector(".app").classList.remove("gpx-mode"); setTimeout(() => map.invalidateSize(), 50);
-  previewLayer.clearLayers();
-}
-$("gpxBtn").addEventListener("click", openGpx);
-$("gpxBack").addEventListener("click", closeGpx);
 $("gpxFile").addEventListener("change", (e) => { const fs = [...e.target.files]; e.target.value = ""; addGpxFiles(fs); });
 const drop = $("drop");
 for (const ev of ["dragenter", "dragover"]) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); });
 for (const ev of ["dragleave", "drop"]) drop.addEventListener(ev, () => drop.classList.remove("over"));
 drop.addEventListener("drop", (e) => { e.preventDefault(); addGpxFiles([...e.dataTransfer.files]); });
-document.addEventListener("dragover", (e) => { if (!$("gpxView").hidden) e.preventDefault(); });
-document.addEventListener("drop", (e) => { if (!$("gpxView").hidden && !drop.contains(e.target)) { e.preventDefault(); addGpxFiles([...e.dataTransfer.files]); } });
-$("fmt").value = lsGet(LS_FMT) || ((navigator.language || "de").toLowerCase().startsWith("de") ? "de" : "en");
-$("fmt").addEventListener("change", (e) => lsSet(LS_FMT, e.target.value));
-
-let gpxSeq = 0;
+document.addEventListener("dragover", (e) => { if (state.view === "gpx") e.preventDefault(); });
+document.addEventListener("drop", (e) => { if (state.view === "gpx" && !drop.contains(e.target)) { e.preventDefault(); addGpxFiles([...e.dataTransfer.files]); } });
+const dupsOf = (d) => d ? tours().filter((t) => t.d === d).map((t) => t.g || t.r).filter(Boolean) : [];
 async function addGpxFiles(files) {
   const gpx = files.filter((f) => /\.gpx$/i.test(f.name) || /gpx|xml/i.test(f.type));
   if (!gpx.length) { gpxStatus(files.length ? "Bitte GPX-Dateien wählen (Endung .gpx)." : "", true); return; }
@@ -886,286 +1231,224 @@ async function addGpxFiles(files) {
       const { pts, name, type } = parseGpx(await readFile(f, true));
       if (pts.length < 2) throw new Error("Die Datei enthält keinen Track.");
       const a = analyzeTrack(pts);
-      const item = {
+      const it = {
         id: "g" + (++gpxSeq), file: f.name, take: true, pts, a, peaks: [], lookup: "wartet",
         d: a.d, s: guessSport(type, name, f.name), g: "", r: "", geb: "", land: "", h: a.top && a.top.ele != null ? a.top.ele : "",
         hm: a.hm ?? "", km: a.km || "", dur: a.dur, sch: "", sl: "", p: "", v: "", b: "", ok: "Ja", txt: "", lr: "", lt: "", lf: "", mt: "", tage: "",
         coord: a.top ? `${a.top.lat.toFixed(5)}, ${a.top.lon.toFixed(5)}` : ""
       };
-      item.dup = a.d ? state.tours.filter((t) => t.d === a.d).map((t) => t.g || t.r).filter(Boolean) : [];
-      if (item.dup.length) item.take = false;
-      gpxItems.push(item);
-      queueLookup(item);
-    } catch (err) {
-      toast(`${f.name}: ${err.message || "konnte nicht gelesen werden"}`);
-    }
+      it.dup = dupsOf(a.d); if (it.dup.length) it.take = false;
+      gpxItems.push(it);
+      queueLookup(it);
+    } catch (err) { toast(`${f.name}: ${err.message || "konnte nicht gelesen werden"}`); }
   }
   gpxItems.sort((x, y) => String(x.d).localeCompare(String(y.d)));
   renderCards(); drawPreview(); gpxStatus("");
 }
-function queueLookup(item) {
+function queueLookup(it) {
   lookupQueue = lookupQueue.then(async () => {
-    if (!gpxItems.includes(item) || !item.a.top) { item.lookup = "fertig"; return; }
-    item.lookup = "läuft"; updateLookupNote(item);
-    const { lat, lon } = item.a.top;
+    if (!gpxItems.includes(it) || !it.a.top) { it.lookup = "fertig"; return; }
+    it.lookup = "läuft";
+    const { lat, lon } = it.a.top;
     try {
-      let peaks = await nearbyPeaks(lat, lon, 1500);
-      item.peaks = peaks.slice(0, 8);
+      const peaks = await nearbyPeaks(lat, lon, 1500);
+      it.peaks = peaks.slice(0, 8);
       const best = peaks.find((p) => p.dist <= 500);
-      if (best && !item.g) {
-        item.g = best.name;
-        if (best.ele) item.h = best.ele;
-        item.coord = `${best.lat.toFixed(5)}, ${best.lon.toFixed(5)}`;
-        item.peakNote = `Gipfel aus OpenStreetMap: ${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.dist)} m vom höchsten Punkt.`;
-      } else if (peaks.length) {
-        item.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${peaks.slice(0, 3).map((p) => p.name).join(", ")}.`;
-      } else item.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen.";
-    } catch (e) {
-      item.peakNote = "Gipfelvorschlag gerade nicht möglich (keine Verbindung zu OpenStreetMap). Bitte selbst eintragen.";
-    }
-    try { await sleep(1100); if (!item.land) item.land = await countryOf(lat, lon); } catch (e) { /* country stays empty */ }
-    item.lookup = "fertig";
-    if (gpxItems.includes(item)) refreshCard(item);
+      if (best && !it.g) {
+        it.g = best.name; if (best.ele) it.h = best.ele;
+        it.coord = `${best.lat.toFixed(5)}, ${best.lon.toFixed(5)}`;
+        it.peakNote = `Gipfel aus OpenStreetMap: ${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.dist)} m vom höchsten Punkt.`;
+      } else if (peaks.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${peaks.slice(0, 3).map((p) => p.name).join(", ")}.`;
+      else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen.";
+    } catch (e) { it.peakNote = "Gipfelvorschlag gerade nicht möglich (keine Verbindung zu OpenStreetMap). Bitte selbst eintragen."; }
+    try { await sleep(1100); if (!it.land) it.land = await countryOf(lat, lon); } catch (e) { /* country stays empty */ }
+    it.lookup = "fertig";
+    if (gpxItems.includes(it)) refreshCard(it);
   });
 }
-
-const FIELD_DEFS = [
-  ["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak"], ["h", "Gipfelhöhe (m)", "num"], ["r", "Route", "text"],
-  ["land", "Land", "text"], ["geb", "Gebirgsgruppe", "text"], ["mt", "Mehrtagestour (Name)", "mt"]
-];
-const MORE_DEFS = [
-  ["d", "Datum (erster Tag)", "date"], ["tage", "Tage", "num"], ["dur", "Dauer (h:mm)", "text"], ["hm", "Höhenmeter", "num"], ["km", "Distanz (km)", "num"],
-  ["sch", "Schwierigkeit", "text"], ["sl", "Seillängen", "num"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"],
-  ["ok", "Gipfel erreicht", "ok"], ["v", "Verhältnisse / Wetter", "text"], ["txt", "Beschreibung", "area"],
-  ["lt", "Link Track (Suunto, Strava …)", "url"], ["lr", "Link Routenbeschreibung", "url"], ["lf", "Link Fotos", "url"], ["coord", "Koordinaten", "text"]
-];
-function fieldHtml(it, [k, label, type]) {
-  const v = it[k] ?? "", id = `${it.id}-${k}`, full = type === "area" || k === "coord" || k.startsWith("l") && type === "url";
-  let input;
-  if (type === "sport") input = `<select id="${id}" data-k="${k}"><option value="">– wählen –</option>${sportsKnown().map((s) => `<option${s === v ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>`;
-  else if (type === "stars") input = `<select id="${id}" data-k="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}"${+v === n ? " selected" : ""}>${"★".repeat(n)}</option>`).join("")}</select>`;
-  else if (type === "ok") input = `<select id="${id}" data-k="${k}">${["Ja", "Nein", "–"].map((o) => `<option${o === v ? " selected" : ""}>${o}</option>`).join("")}</select>`;
-  else if (type === "area") input = `<textarea id="${id}" data-k="${k}" rows="2">${esc(v)}</textarea>`;
-  else if (type === "peak") input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(v)}" autocomplete="off"><datalist id="${id}-dl">${it.peaks.map((p) => `<option value="${esc(p.name)}">${p.ele ? nf.format(p.ele) + " m · " : ""}${Math.round(p.dist)} m entfernt</option>`).join("")}</datalist>`;
-  else if (type === "mt") {
-    const names = [...new Set([...state.tours.map((t) => t.mt), ...gpxItems.map((x) => x.mt)].filter(Boolean))];
-    input = `<input id="${id}" data-k="${k}" type="text" list="${id}-dl" value="${esc(v)}" placeholder="nur bei mehrtägigen Touren" autocomplete="off"><datalist id="${id}-dl">${names.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>`;
-  }
-  else if (type === "date") input = `<input id="${id}" data-k="${k}" type="date" value="${esc(v)}">`;
-  else if (type === "num") input = `<input id="${id}" data-k="${k}" type="text" inputmode="decimal" value="${esc(v === "" ? "" : String(v).replace(".", ","))}">`;
-  else input = `<input id="${id}" data-k="${k}" type="${type === "url" ? "url" : "text"}" value="${esc(v)}"${type === "url" ? ' placeholder="https://…"' : ""}>`;
-  return `<label class="field${full ? " full" : ""}" for="${id}"><span>${label}</span>${input}</label>`;
+const G_MAIN = [["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak", "full"], ["h", "Gipfelhöhe (m)", "int"], ["land", "Land", "text"], ["r", "Route", "text", "full"], ["geb", "Gebirgsgruppe", "text"], ["mt", "Mehrtagestour (Name)", "mt"]];
+const G_MORE = [["d", "Datum (erster Tag)", "date"], ["tage", "Tage", "int"], ["dur", "Dauer (h:mm)", "dur"], ["hm", "Höhenmeter", "int"], ["km", "Distanz (km)", "num"],
+  ["sch", "Schwierigkeit", "grade"], ["sl", "Seillängen", "int"], ["p", "Partner", "text"], ["b", "Bewertung", "stars"], ["ok", "Gipfel erreicht", "ok"],
+  ["v", "Verhältnisse / Wetter", "text", "full"], ["txt", "Beschreibung", "area", "full"], ["lt", "Link Track (Suunto, Strava …)", "url", "full"],
+  ["lr", "Link Routenbeschreibung", "url", "full"], ["lf", "Link Fotos", "url", "full"], ["coord", "Koordinaten", "coord", "full"]];
+const peakButtons = (it) => it.peaks.slice(0, 5).map((p, i) => `<button type="button" data-npeak="${i}" data-item="${it.id}">${esc(p.name)}${p.ele ? " · " + nf.format(p.ele) + " m" : ""}<small>${Math.round(p.dist)} m vom höchsten Punkt</small></button>`).join("");
+function gpxFieldHtml(it, def) {
+  const o = { ...it };
+  const c = parseCoord(it.coord); o.lat = c ? c.lat : null; o.lon = c ? c.lon : null;
+  let html = fieldHtml(o, def, "g-" + it.id);
+  if (def[0] === "g") html = html.replace(`<div class="results" id="g-${it.id}-results"></div>`, `<div class="results" id="g-${it.id}-results">${peakButtons(it)}</div>`);
+  return html;
 }
 function cardHtml(it) {
   const a = it.a;
   const facts = [
-    a.days > 1 ? `<span><b>${fmtDate(a.d)} – ${fmtDate(a.dEnd)}</b> · ${a.days} Tage</span>` :
-    a.d && `<span><b>${fmtDate(a.d)}</b>${a.startTime ? " · Start " + a.startTime : ""}</span>`,
-    a.dur && `<span><b>${a.dur}</b> h</span>`,
-    a.km ? `<span><b>${nf1.format(a.km)}</b> km</span>` : "",
-    a.hm != null && `<span><b>${nf.format(a.hm)}</b> Hm ↑</span>`,
-    a.top && a.top.ele != null && `<span>höchster Punkt <b>${nf.format(a.top.ele)} m</b></span>`
+    a.days > 1 ? `<span><b>${fmtDate(a.d)} – ${fmtDate(a.dEnd)}</b> · ${a.days} Tage</span>` : a.d && `<span><b>${fmtDate(a.d)}</b>${a.startTime ? " · Start " + a.startTime : ""}</span>`,
+    a.dur && `<span><b>${a.dur}</b> h</span>`, a.km ? `<span><b>${nf1.format(a.km)}</b> km</span>` : "",
+    a.hm != null && `<span><b>${nf.format(a.hm)}</b> Hm ↑</span>`, a.top && a.top.ele != null && `<span>höchster Punkt <b>${nf.format(a.top.ele)} m</b></span>`
   ].filter(Boolean).join("");
   const note = it.lookup === "fertig" ? (it.peakNote || "") : "Suche Gipfel und Land in OpenStreetMap …";
   return `<article class="card${it.take ? "" : " off"}" data-id="${it.id}">
     <div class="card-top"><span class="fname" title="${esc(it.file)}">${esc(it.file)}</span>
-      <label><input type="checkbox" data-take${it.take ? " checked" : ""}> übernehmen</label>
-      <button class="iconbtn" type="button" data-remove aria-label="Entfernen" style="width:30px;height:30px;font-size:15px">×</button></div>
-    ${it.parts ? `<div class="note">Aus ${it.parts.length} Dateien: ${esc(it.parts.map((x) => x.file).join(", "))} · <a href="#" data-split style="color:var(--accent);font-weight:600">Wieder trennen</a></div>` : ""}
+      <label><input type="checkbox" data-take${it.take ? " checked" : ""}> speichern</label>
+      <button class="iconbtn" type="button" data-remove aria-label="Aus der Liste entfernen" style="min-width:30px;height:30px">×</button></div>
+    ${it.parts ? `<div class="note">Aus ${it.parts.length} Dateien: ${esc(it.parts.map((x) => x.file).join(", "))} · <button class="linkbtn" type="button" data-split>Wieder trennen</button></div>` : ""}
     <div class="facts">${facts || '<span class="note">Keine Zeit- oder Höhendaten im Track.</span>'}</div>
-    ${it.copied ? `<div class="note" style="color:var(--ok)">✓ Am ${new Date(it.copied).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })} in die Zwischenablage kopiert. Zum erneuten Kopieren wieder anhaken.</div>` : ""}
-    ${it.dup.length ? `<div class="note warn">Am ${fmtDate(it.d)} steht schon im Gipfelbuch: ${esc(it.dup.join(", "))}. Deshalb nicht angehakt.</div>` : ""}
+    ${(it.dup || []).length ? `<div class="note warn">Am ${fmtDate(it.d)} steht schon im Gipfelbuch: ${esc(it.dup.join(", "))}. Deshalb nicht angehakt.</div>` : ""}
     <div class="note" data-note>${esc(note)}</div>
-    <div class="fields">${FIELD_DEFS.map((f) => fieldHtml(it, f)).join("")}</div>
-    <details><summary>Weitere Felder: Datum, Dauer, Partner, Bewertung, Links …</summary><div class="fields">${MORE_DEFS.map((f) => fieldHtml(it, f)).join("")}</div></details>
+    <div class="fields">${G_MAIN.map((f) => gpxFieldHtml(it, f)).join("")}</div>
+    <details><summary>Weitere Felder: Datum, Dauer, Partner, Bewertung, Links …</summary><div class="fields">${G_MORE.map((f) => gpxFieldHtml(it, f)).join("")}</div></details>
   </article>`;
 }
 function renderCards() {
   $("cards").innerHTML = gpxItems.map(cardHtml).join("");
-  updateMultiBar(); saveGpx();
   $("drop").querySelector("b").textContent = gpxItems.length ? "Weitere GPX-Datei hinzufügen" : "GPX-Datei wählen";
-  updateCopyBtn();
+  updateGpxSave(); updateMultiBar(); saveGpx();
 }
 function refreshCard(it) {
   const el = document.querySelector(`.card[data-id="${it.id}"]`); if (!el) return;
   el.querySelector("[data-note]").textContent = it.peakNote || "";
-  const dl = el.querySelector(`#${it.id}-g-dl`);
-  if (dl) dl.innerHTML = it.peaks.map((p) => `<option value="${esc(p.name)}">${p.ele ? nf.format(p.ele) + " m · " : ""}${Math.round(p.dist)} m entfernt</option>`).join("");
+  const res = $(`g-${it.id}-results`); if (res) res.innerHTML = peakButtons(it);
   for (const k of ["g", "h", "coord", "land"]) {
-    const inp = el.querySelector(`[data-k="${k}"]`);
-    if (inp && document.activeElement !== inp && inp.value !== String(it[k] ?? "")) inp.value = k === "h" ? String(it[k] ?? "").replace(".", ",") : (it[k] ?? "");
+    const inp = $(`g-${it.id}-${k}`);
+    const v = k === "h" ? numOut(it[k]) : (it[k] ?? "");
+    if (inp && document.activeElement !== inp && inp.value !== String(v)) inp.value = v;
   }
   drawPreview(true); saveGpx();
 }
-function updateLookupNote(it) {
-  const n = document.querySelector(`.card[data-id="${it.id}"] [data-note]`);
-  if (n) n.textContent = "Suche Gipfel und Land in OpenStreetMap …";
-}
+const itemOf = (el) => { const card = el.closest(".card"); return card ? gpxItems.find((x) => x.id === card.dataset.id) : null; };
 $("cards").addEventListener("input", (e) => {
-  const card = e.target.closest(".card"), k = e.target.dataset.k; if (!card || !k) return;
-  const it = gpxItems.find((x) => x.id === card.dataset.id); if (!it) return;
-  const v = e.target.value;
-  it[k] = v;
-  if (k === "g") {
-    const p = it.peaks.find((x) => x.name === v);
-    if (p) {
-      if (p.ele) { it.h = p.ele; const hEl = card.querySelector('[data-k="h"]'); if (hEl) hEl.value = p.ele; }
-      it.coord = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`; const cEl = card.querySelector('[data-k="coord"]'); if (cEl) cEl.value = it.coord;
-      drawPreview(true);
-    }
-  }
+  const it = itemOf(e.target), k = e.target.dataset.k; if (!it || !k) return;
+  it[k] = e.target.value;
   if (k === "coord" || k === "s") drawPreview(true);
   saveGpx();
 });
 $("cards").addEventListener("change", (e) => {
-  const card = e.target.closest(".card"); if (!card) return;
-  const it = gpxItems.find((x) => x.id === card.dataset.id); if (!it) return;
-  if (e.target.matches("[data-take]")) { it.take = e.target.checked; card.classList.toggle("off", !it.take); updateCopyBtn(); updateMultiBar(); drawPreview(true); }
-  else if (e.target.dataset.k) it[e.target.dataset.k] = e.target.value;
+  const it = itemOf(e.target); if (!it) return;
+  if (e.target.matches("[data-take]")) { it.take = e.target.checked; e.target.closest(".card").classList.toggle("off", !it.take); updateGpxSave(); updateMultiBar(); drawPreview(true); }
+  else if (e.target.dataset.k) {
+    if (e.target.dataset.k === "s" && e.target.value === "__neu") {
+      const wrap = e.target.closest(".field");
+      wrap.innerHTML = `<span>Sportart</span><input id="g-${it.id}-s" data-k="s" type="text" placeholder="z. B. Eisklettern" autocomplete="off">`;
+      $(`g-${it.id}-s`).focus(); it.s = ""; return;
+    }
+    it[e.target.dataset.k] = e.target.value;
+    if (e.target.dataset.k === "s") { const dl = $(`g-${it.id}-sch-dl`); if (dl) dl.innerHTML = (GRADES[it.s] || []).map((g) => `<option value="${esc(g)}"></option>`).join(""); }
+  }
   saveGpx();
 });
 $("cards").addEventListener("click", (e) => {
+  const np = e.target.closest("[data-npeak]");
+  if (np) {
+    const it = gpxItems.find((x) => x.id === np.dataset.item), p = it && it.peaks[+np.dataset.npeak];
+    if (p) { it.g = p.name; if (p.ele) it.h = p.ele; it.coord = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`; refreshCard(it); }
+    return;
+  }
   if (e.target.closest("[data-split]")) {
-    e.preventDefault();
-    const card = e.target.closest(".card"), it = gpxItems.find((x) => x.id === card.dataset.id);
+    const it = itemOf(e.target);
     if (it && it.parts) { gpxItems.splice(gpxItems.indexOf(it), 1, ...it.parts.map((x) => ({ ...x, take: true }))); renderCards(); drawPreview(true); }
     return;
   }
-  if (!e.target.closest("[data-remove]")) return;
-  const card = e.target.closest(".card");
-  gpxItems = gpxItems.filter((x) => x.id !== card.dataset.id);
-  renderCards(); drawPreview();
+  if (e.target.closest("[data-remove]")) { const it = itemOf(e.target); gpxItems = gpxItems.filter((x) => x !== it); renderCards(); drawPreview(true); }
 });
 function selected() { return gpxItems.filter((x) => x.take).sort((a, b) => String(a.d).localeCompare(String(b.d)) || ((a.pts[0] || {}).t || 0) - ((b.pts[0] || {}).t || 0)); }
 function updateMultiBar() {
   const sel = selected();
   $("multiBar").hidden = sel.length < 2;
   $("multiTitle").textContent = `${sel.length} Touren angehakt – mehrtägig?`;
-  if (sel.length >= 2 && !$("mtName").value) {
+  if (sel.length >= 2) {
     const ds = sel.map((x) => x.d).filter(Boolean).sort();
     const where = sel.map((x) => x.geb || x.g).find(Boolean) || "Mehrtagestour";
     $("mtName").placeholder = ds.length ? `z. B. ${where} ${fmtDate(ds[0]).slice(0, 6)}–${fmtDate(ds[ds.length - 1])}` : "z. B. Dachstein-Wochenende";
   }
 }
-function mtNameOrSuggest() {
-  const v = $("mtName").value.trim();
-  if (v) return v;
-  const ph = $("mtName").placeholder.replace(/^z\. B\. /, "");
-  return ph;
-}
+const mtNameOrSuggest = () => $("mtName").value.trim() || $("mtName").placeholder.replace(/^z\. B\. /, "");
 $("linkBtn").addEventListener("click", () => {
   const sel = selected(); if (sel.length < 2) return;
   const name = mtNameOrSuggest();
   for (const it of sel) it.mt = name;
   $("mtName").value = name;
   renderCards();
-  toast(`${sel.length} Touren als »${name}« verknüpft. Jede bleibt eine eigene Zeile.`);
+  toast(`${sel.length} Touren als »${name}« verknüpft. Jede bleibt eine eigene Tour.`);
 });
 $("mergeBtn").addEventListener("click", () => {
   const sel = selected(); if (sel.length < 2) return;
-  const parts = sel.map((x) => x.parts ? x.parts : [x]).flat();
-  const mins = (s) => { const m = /^(\d+):(\d{2})$/.exec(String(s || "")); return m ? +m[1] * 60 + +m[2] : 0; };
-  const sum = (k) => parts.reduce((a, x) => a + (parseFloat(String(x[k] ?? "").replace(",", ".")) || 0), 0);
+  const parts = sel.flatMap((x) => x.parts ? x.parts : [x]);
+  const num = (v) => numIn(v) || 0;
   const tops = parts.filter((x) => x.a.top && x.a.top.ele != null).sort((a, b) => b.a.top.ele - a.a.top.ele);
   const hi = tops[0] || parts[0];
   const dates = [...new Set(parts.map((x) => x.d).filter(Boolean))].sort();
-  const totMin = parts.reduce((a, x) => a + mins(x.dur), 0);
+  const totMin = parts.reduce((a, x) => a + durMin(x.dur), 0);
   const firstOf = (k) => (parts.find((x) => x[k]) || {})[k] || "";
-  const a = {
-    d: dates[0] || "", dEnd: dates[dates.length - 1] || "", days: dates.length, startTime: parts[0].a.startTime,
-    dur: totMin ? `${Math.floor(totMin / 60)}:${String(totMin % 60).padStart(2, "0")}` : "",
-    km: Math.round(sum("km") * 10) / 10, hm: parts.some((x) => x.hm !== "" && x.hm != null) ? Math.round(sum("hm")) : null,
-    top: hi.a.top
-  };
+  const a = { d: dates[0] || "", dEnd: dates[dates.length - 1] || "", days: dates.length, startTime: parts[0].a.startTime, dur: minDur(totMin),
+    km: Math.round(parts.reduce((s, x) => s + num(x.km), 0) * 10) / 10, hm: parts.some((x) => x.hm !== "" && x.hm != null) ? Math.round(parts.reduce((s, x) => s + num(x.hm), 0)) : null, top: hi.a.top };
   const merged = {
     id: "g" + (++gpxSeq), file: `${parts.length} Dateien zusammengeführt`, take: true, parts: parts.map((x) => ({ ...x, take: true })),
     pts: parts.flatMap((x) => x.pts), a, peaks: hi.peaks || [], lookup: "fertig", peakNote: hi.peakNote || "",
-    d: a.d, s: firstOf("s"), g: hi.g || firstOf("g"), r: [...new Set(parts.map((x) => x.r).filter(Boolean))].join(" / "),
-    geb: firstOf("geb"), land: hi.land || firstOf("land"), h: hi.h, hm: a.hm ?? "", km: a.km || "", dur: a.dur,
-    sch: firstOf("sch"), sl: firstOf("sl"), p: firstOf("p"), v: [...new Set(parts.map((x) => x.v).filter(Boolean))].join(" / "),
-    b: firstOf("b"), ok: parts.some((x) => x.ok === "Ja") ? "Ja" : firstOf("ok") || "Ja", txt: parts.map((x) => x.txt).filter(Boolean).join(" "),
-    lr: firstOf("lr"), lt: firstOf("lt"), lf: firstOf("lf"), coord: hi.coord, mt: $("mtName").value.trim(), tage: dates.length > 1 ? dates.length : ""
+    d: a.d, s: firstOf("s"), g: hi.g || firstOf("g"), r: [...new Set(parts.map((x) => x.r).filter(Boolean))].join(" / "), geb: firstOf("geb"),
+    land: hi.land || firstOf("land"), h: hi.h, hm: a.hm ?? "", km: a.km || "", dur: a.dur, sch: firstOf("sch"), sl: firstOf("sl"), p: firstOf("p"),
+    v: [...new Set(parts.map((x) => x.v).filter(Boolean))].join(" / "), b: firstOf("b"), ok: parts.some((x) => x.ok === "Ja") ? "Ja" : (firstOf("ok") || "Ja"),
+    txt: parts.map((x) => x.txt).filter(Boolean).join(" "), lr: firstOf("lr"), lt: firstOf("lt"), lf: firstOf("lf"), coord: hi.coord,
+    mt: $("mtName").value.trim(), tage: dates.length > 1 ? dates.length : ""
   };
-  merged.dup = merged.d ? state.tours.filter((t) => t.d === merged.d).map((t) => t.g || t.r).filter(Boolean) : [];
-  if (merged.dup.length) merged.take = false;
+  merged.dup = dupsOf(merged.d); if (merged.dup.length) merged.take = false;
   const at = gpxItems.indexOf(sel[0]);
   gpxItems = gpxItems.filter((x) => !sel.includes(x));
   gpxItems.splice(Math.max(0, at), 0, merged);
   renderCards(); drawPreview(true);
-  toast(`Zu einer Zeile zusammengeführt${dates.length > 1 ? ` (${dates.length} Tage)` : ""}.`);
+  toast(`Zu einer Tour zusammengeführt${dates.length > 1 ? ` (${dates.length} Tage)` : ""}.`);
 });
-function updateCopyBtn() {
+function updateGpxSave() {
   const n = gpxItems.filter((x) => x.take).length;
-  $("copyBtn").disabled = n === 0;
-  $("copyBtn").textContent = n > 1 ? `${n} Zeilen kopieren` : "Zeile kopieren";
-  $("howto").hidden = true; $("copyFallback").hidden = true;
+  $("gpxSave").disabled = n === 0;
+  $("gpxSave").textContent = n > 1 ? `${n} Touren im Gipfelbuch speichern` : "Im Gipfelbuch speichern";
 }
 function gpxStatus(msg, err) { const s = $("gpxStatus"); s.textContent = msg || ""; s.classList.toggle("err", !!err); }
 function drawPreview(keepView) {
   previewLayer.clearLayers();
+  if (state.view !== "gpx") return;
   for (const it of gpxItems) {
-    const line = L.polyline(it.pts.map((p) => [p.lat, p.lon]), { color: "#C8102E", weight: 4, opacity: it.take ? 0.9 : 0.4 });
-    previewLayer.addLayer(line);
+    if (it.pts.length > 1) previewLayer.addLayer(L.polyline(it.pts.map((p) => [p.lat, p.lon]), { color: "#C8102E", weight: 4, opacity: it.take ? 0.9 : 0.35 }));
     const c = parseCoord(it.coord);
-    if (c) previewLayer.addLayer(L.circleMarker([c.lat, c.lon], { renderer: ptsR, radius: 8, color: "#FFFFFF", weight: 2.5, fillColor: colorFor(it.s) || "#C8102E", fillOpacity: 1 })
+    if (c) previewLayer.addLayer(L.circleMarker([c.lat, c.lon], { renderer: ptsR, radius: 8, color: "#FFFFFF", weight: 2.5, fillColor: colorFor(it.s), fillOpacity: 1 })
       .bindTooltip(esc(it.g || "Höchster Punkt"), { direction: "top", offset: [0, -8] }));
   }
-  if (!keepView && gpxItems.length) {
-    const b = L.latLngBounds([]); previewLayer.eachLayer((l) => b.extend(l.getBounds ? l.getBounds() : l.getLatLng()));
-    if (b.isValid()) map.fitBounds(b, { padding: [30, 30], maxZoom: 14 });
-  }
+  if (!keepView && gpxItems.length) { const b = L.latLngBounds([]); previewLayer.eachLayer((l) => b.extend(l.getBounds ? l.getBounds() : l.getLatLng())); if (b.isValid()) map.fitBounds(b, { padding: [30, 30], maxZoom: 14 }); }
 }
-
-/* ---- Excel row (tab separated, column order of the Tourenbuch A–U) ---- */
-function cellValue(it, k, fmt) {
-  const clean = (s) => { s = String(s ?? "").replace(/[\t\r\n]+/g, " ").trim(); return /^[=+@]/.test(s) ? "'" + s : s; };
-  const num = (v, dec) => {
-    if (v === "" || v == null) return "";
-    const n = typeof v === "number" ? v : parseFloat(String(v).replace(/\s/g, "").replace(",", "."));
-    if (!isFinite(n)) return clean(v);
-    const s = dec ? (Math.round(n * 10) / 10).toString() : Math.round(n).toString();
-    return fmt === "de" ? s.replace(".", ",") : s;
-  };
-  switch (k) {
-    case "d": if (!it.d) return ""; return fmt === "de" ? fmtDate(it.d) : it.d;
-    case "h": case "hm": case "sl": case "tage": return num(it[k], false);
-    case "km": return num(it.km, true);
-    case "b": return +it.b ? "★".repeat(+it.b) : "";
-    case "coord": { const c = parseCoord(it.coord); return c ? `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}` : clean(it.coord); }
-    default: return clean(it[k]);
-  }
+function tourFromGpx(it) {
+  const o = { id: uid("t"), created: new Date().toISOString(), changed: new Date().toISOString() };
+  const errs = [];
+  const put = (k, v) => { if (v != null && v !== "" && !Number.isNaN(v)) o[k] = v; };
+  put("d", it.d); put("s", it.s && it.s !== "__neu" ? String(it.s).trim() : ""); put("g", String(it.g || "").trim()); put("r", String(it.r || "").trim());
+  for (const k of ["geb", "land", "sch", "p", "v", "txt", "mt"]) put(k, String(it[k] || "").trim());
+  for (const [k, l] of [["h", "Gipfelhöhe"], ["hm", "Höhenmeter"], ["sl", "Seillängen"], ["tage", "Tage"]]) { const n = numIn(it[k], true); if (Number.isNaN(n)) errs.push(l); else put(k, n); }
+  const km = numIn(it.km); if (Number.isNaN(km)) errs.push("Distanz"); else put("km", km);
+  const dur = durIn(it.dur); if (dur === null) errs.push("Dauer"); else put("dur", dur);
+  put("b", +it.b || null); put("ok", it.ok || "Ja");
+  for (const k of ["lr", "lt", "lf"]) put(k, urlIn(it[k]));
+  const c = parseCoord(it.coord); if (c) { o.lat = c.lat; o.lon = c.lon; }
+  return { o, errs };
 }
-const toTsv = (items, fmt) => items.map((it) => GPX_COLS.map((k) => cellValue(it, k, fmt)).join("\t")).join("\n");
-$("copyBtn").addEventListener("click", async () => {
+$("gpxSave").addEventListener("click", async () => {
   const items = gpxItems.filter((x) => x.take);
-  const missing = items.filter((x) => !x.s);
+  const missing = items.filter((x) => !x.s || x.s === "__neu");
   if (missing.length) {
     gpxStatus(`Bitte noch die Sportart wählen: ${missing.map((x) => x.g || x.file).join(", ")}.`, true);
-    const el = document.querySelector(`.card[data-id="${missing[0].id}"] [data-k="s"]`); if (el) el.focus();
+    const el = $(`g-${missing[0].id}-s`); if (el) el.focus();
     return;
   }
-  const tsv = toTsv(items, $("fmt").value);
-  let ok = false;
-  try { await navigator.clipboard.writeText(tsv); ok = true; } catch (e) { ok = false; }
-  if (!ok) {
-    const ta = $("copyFallback"); ta.hidden = false; ta.value = tsv; ta.focus(); ta.select();
-    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
-    if (!ok) { gpxStatus("Kopieren ging nicht automatisch: Text im Feld markieren und kopieren.", true); return; }
-  }
-  const now = new Date().toISOString();
-  for (const it of items) { it.copied = now; it.take = false; }
-  renderCards(); drawPreview(true);
-  gpxStatus(""); $("howto").hidden = false;
-  toast(items.length > 1 ? `${items.length} Zeilen kopiert.` : "Zeile kopiert.");
+  const conv = items.map((it) => ({ it, ...tourFromGpx(it) }));
+  const bad = conv.filter((c) => c.errs.length || (!c.o.g && !c.o.r));
+  if (bad.length) { gpxStatus(`Bitte prüfen: ${bad.map((c) => (c.it.g || c.it.file) + (c.errs.length ? " (" + c.errs.join(", ") + ")" : " (Gipfel oder Route fehlt)")).join(" · ")}`, true); return; }
+  $("gpxSave").disabled = true; gpxStatus("Speichert …");
+  const label = conv.length === 1 ? `Tour neu (GPX): ${conv[0].o.g || conv[0].o.r}${conv[0].o.d ? " (" + fmtDate(conv[0].o.d) + ")" : ""}` : `GPX-Import: ${conv.length} Touren`;
+  try {
+    await mutate((d) => { for (const c of conv) d.tours.push(c.o); }, label);
+    gpxItems = gpxItems.filter((x) => !items.includes(x));
+    renderCards(); gpxStatus("");
+    toast(conv.length === 1 ? "Tour gespeichert." : `${conv.length} Touren gespeichert.`);
+    show("browse"); fitAll();
+  } catch (e) { gpxStatus(e.message + " Die Liste bleibt erhalten.", true); updateGpxSave(); }
 });
-$("clearCopied").addEventListener("click", () => {
-  const n = gpxItems.filter((x) => x.copied).length;
-  gpxItems = gpxItems.filter((x) => !x.copied);
-  renderCards(); drawPreview(true);
-  toast(n === 1 ? "1 Tour aus der Liste entfernt." : `${n} Touren aus der Liste entfernt.`);
-});
-
-/* ---- keep the GPX list on this device ---- */
 const thinPts = (pts) => {
   const step = Math.max(1, Math.ceil(pts.length / 600));
   const out = pts.filter((_, i) => i % step === 0);
@@ -1178,39 +1461,292 @@ let gpxSaveT;
 function saveGpx() {
   clearTimeout(gpxSaveT);
   gpxSaveT = setTimeout(() => {
-    if (!lsSet(LS_GPX, JSON.stringify(gpxItems.map(packItem)))) gpxStatus("Die GPX-Liste ist zu groß zum Merken. Sie bleibt nur, bis du die Seite schließt.", true);
+    if (!lsSet(LS.gpx, JSON.stringify(gpxItems.map(packItem)))) gpxStatus("Die GPX-Liste ist zu groß zum Merken. Sie bleibt nur, bis du die Seite schließt.", true);
     updateGpxBadge();
   }, 250);
 }
-function updateGpxBadge() {
-  const open = gpxItems.filter((x) => !x.copied).length;
-  $("gpxBtn").textContent = open ? `GPX-Liste (${open} offen)` : "Neue Tour aus GPX";
+function updateGpxBadge() { const n = gpxItems.length; $("gpxBtn").textContent = n ? `GPX importieren (${n} offen)` : "GPX importieren"; }
+
+/* ===================== statistics ===================== */
+function renderStatsView() {
+  const T = filteredTours();
+  const filtersOn = state.sportsOff.size || state.year || state.land || state.mt || state.q;
+  const reached = T.filter((t) => t.ok !== "Nein");
+  const peaks = new Set(reached.map((t) => (t.g || "").toLowerCase()).filter(Boolean));
+  const sum = (list, k) => list.reduce((a, t) => a + (+t[k] || 0), 0);
+  const mins = T.reduce((a, t) => a + durMin(t.dur), 0);
+  const hi = [...reached].filter((t) => +t.h).sort((a, b) => b.h - a.h)[0];
+  const hmMax = [...T].filter((t) => +t.hm).sort((a, b) => b.hm - a.hm)[0];
+  const kpi = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+  let html = filtersOn ? `<p class="note" style="margin:0">Gilt für die aktuellen Filter der Übersicht.</p>` : "";
+  if (!T.length) { $("statsBody").innerHTML = html + `<div class="empty" style="padding:0"><b>Noch nichts auszuwerten</b><span>Sobald Touren im Gipfelbuch stehen, siehst du hier Höhenmeter, Gipfel und Tage pro Jahr und Sportart.</span></div>`; return; }
+  html += `<div class="kpis">
+    ${kpi(nf.format(T.length), "Touren")}${kpi(nf.format(peaks.size), "verschiedene Gipfel")}
+    ${kpi(nf.format(dayCount(T)), "Tage am Berg")}${kpi(nf.format(Math.round(sum(T, "hm"))), "Höhenmeter")}
+    ${kpi(nf.format(Math.round(sum(T, "km"))), "Kilometer")}${kpi(minDur(mins) || "–", "Stunden unterwegs")}
+    ${kpi(hi ? esc(hi.g) : "–", hi ? `höchster Gipfel · ${nf.format(hi.h)} m` : "höchster Gipfel")}
+    ${kpi(hmMax ? nf.format(hmMax.hm) + " Hm" : "–", hmMax ? `meiste Höhenmeter · ${esc(hmMax.g || hmMax.r)}` : "meiste Höhenmeter")}
+  </div>`;
+  const years = {};
+  for (const t of T) { const y = String(t.d || "").slice(0, 4) || "–"; (years[y] = years[y] || []).push(t); }
+  const yk = Object.keys(years).sort().reverse();
+  const maxHm = Math.max(1, ...yk.map((y) => sum(years[y], "hm")));
+  html += `<h3 class="sec">Höhenmeter pro Jahr</h3><div class="bars">${yk.map((y) => { const v = sum(years[y], "hm"); return `<div class="barrow"><span class="k">${esc(y)}</span><div class="track"><div class="fill" style="width:${(v / maxHm * 100).toFixed(1)}%"></div></div><span class="v">${nf.format(Math.round(v))}</span></div>`; }).join("")}</div>`;
+  html += `<div class="tblwrap"><table class="t"><thead><tr><th>Jahr</th><th class="num">Touren</th><th class="num">Gipfel</th><th class="num">Tage</th><th class="num">Hm</th><th class="num">km</th></tr></thead><tbody>
+    ${yk.map((y) => { const Y = years[y]; return `<tr><td>${esc(y)}</td><td class="num">${Y.length}</td><td class="num">${Y.filter((t) => t.ok !== "Nein" && t.g).length}</td><td class="num">${dayCount(Y)}</td><td class="num">${nf.format(Math.round(sum(Y, "hm")))}</td><td class="num">${nf.format(Math.round(sum(Y, "km")))}</td></tr>`; }).join("")}
+  </tbody></table></div>`;
+  const sp = {};
+  for (const t of T) (sp[t.s || "–"] = sp[t.s || "–"] || []).push(t);
+  const sk = Object.keys(sp).sort((a, b) => sp[b].length - sp[a].length);
+  const maxN = Math.max(1, ...sk.map((s) => sp[s].length));
+  html += `<h3 class="sec">Touren pro Sportart</h3><div class="bars">${sk.map((s) => `<div class="barrow"><span class="k">${esc(s)}</span><div class="track"><div class="fill" style="--c:${colorFor(s)};width:${(sp[s].length / maxN * 100).toFixed(1)}%"></div></div><span class="v">${sp[s].length} · ${nf.format(Math.round(sum(sp[s], "hm")))} Hm</span></div>`).join("")}</div>`;
+  const mt = {};
+  for (const t of T) if (t.mt) (mt[t.mt] = mt[t.mt] || []).push(t);
+  const firstDate = (L1) => L1.map((t) => t.d || "").filter(Boolean).sort()[0] || "";
+  const mk = Object.keys(mt).sort((a, b) => firstDate(mt[b]).localeCompare(firstDate(mt[a])));
+  const multi = T.filter((t) => !t.mt && +t.tage > 1);
+  if (mk.length || multi.length) {
+    html += `<h3 class="sec">Mehrtagestouren</h3><div class="tblwrap"><table class="t"><thead><tr><th>Tour</th><th>Zeitraum</th><th class="num">Tage</th><th class="num">Etappen</th><th class="num">Hm</th></tr></thead><tbody>`;
+    for (const n of mk) {
+      const M = mt[n], ds = M.map((t) => t.d).filter(Boolean).sort();
+      html += `<tr><td><button class="linkbtn" type="button" data-mtf="${esc(n)}">${esc(n)}</button></td><td>${ds.length ? fmtDate(ds[0]) + (ds.length > 1 ? " – " + fmtDate(ds[ds.length - 1]) : "") : "–"}</td><td class="num">${dayCount(M)}</td><td class="num">${M.length}</td><td class="num">${nf.format(Math.round(sum(M, "hm")))}</td></tr>`;
+    }
+    for (const t of multi) html += `<tr><td>${esc(t.g || t.r)}</td><td>${fmtDate(t.d)}</td><td class="num">${t.tage}</td><td class="num">1</td><td class="num">${nf.format(Math.round(+t.hm || 0))}</td></tr>`;
+    html += `</tbody></table></div>`;
+  }
+  const bOpen = bucketItems().filter((b) => !bucketDone(b)).length, bDone = bucketItems().length - bOpen;
+  if (bucketItems().length) html += `<h3 class="sec">Bucketlist</h3><p style="margin:0">${bDone} von ${bucketItems().length} Zielen erledigt, ${bOpen} offen.</p>`;
+  $("statsBody").innerHTML = html;
 }
+
+/* ===================== settings, Excel ===================== */
+function renderSettings() {
+  $("setRepo").innerHTML = `Deine Daten liegen in <b>${esc(state.repo)}</b> (Datei ${FILE}).`;
+  $("historyLink").href = `https://github.com/${state.repo}/commits/HEAD/${FILE}`;
+  setSync();
+  $("importBox").hidden = true; $("xlsxStatus").textContent = "";
+}
+$("syncNow").addEventListener("click", async () => { if (await sync()) toast("Aktualisiert."); });
+$("changeAccess").addEventListener("click", () => openSetup(true));
+$("logout").addEventListener("click", () => {
+  if (!armed($("logout"), "Wirklich abmelden?")) return;
+  lsDel(LS.token); lsDel(LS.cache); state.token = ""; state.data = emptyData(); state.sha = null; state.lastSync = null; state.syncErr = "";
+  render(); setSync(); openSetup(false); toast("Auf diesem Gerät abgemeldet. Deine Daten auf GitHub bleiben unverändert.");
+});
+let xlsxPromise = null;
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (!xlsxPromise) xlsxPromise = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = XLSX_URL; s.integrity = XLSX_SRI; s.crossOrigin = "anonymous";
+    s.onload = () => res(window.XLSX); s.onerror = () => { xlsxPromise = null; rej(new Error("Der Excel-Baustein konnte nicht geladen werden. Prüfe die Internetverbindung.")); };
+    document.head.appendChild(s);
+  });
+  return xlsxPromise;
+}
+const norm = (h) => String(h || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+const ALIAS = {
+  d: ["datum", "date", "wann", "datumerstertag"], s: ["sportart", "sport", "art"], g: ["gipfelziel", "gipfel", "ziel", "berg", "name"],
+  r: ["route", "tourname", "routetourname", "tour"], geb: ["gebirgsgruppe", "gebirge", "region", "gebiet"], land: ["land", "landregion"],
+  h: ["gipfelhohe", "hohe", "gipfelhohem", "hohem"], hm: ["hohenmeter", "hm", "aufstieg"], km: ["distanz", "km", "distanzkm", "strecke"],
+  dur: ["dauer", "dauerh", "zeit", "dauerhmm"], sch: ["schwierigkeit", "grad"], sl: ["seillangen", "sl"], p: ["partner", "mit"],
+  v: ["verhaltnisse", "wetter", "verhaltnissewetter", "bedingungen"], b: ["bewertung", "sterne"], ok: ["gipfelerreicht", "erreicht"],
+  txt: ["beschreibung", "notizen", "notiz", "kommentar"], coord: ["koordinaten", "koordinate", "coords", "position"],
+  lat: ["breite", "lat", "latitude", "breitengrad"], lon: ["lange", "lon", "lng", "longitude", "langengrad"],
+  prio: ["prioritat", "prio"], zeit: ["bestezeit", "saison"], mt: ["mehrtagestour", "mehrtagestouren", "tourgruppe", "gruppe", "mehrtagestourname"], tage: ["tage", "anzahltage"]
+};
+function headerMap(row) {
+  const m = {}, links = [];
+  row.forEach((h, i) => {
+    const n = norm(h); if (!n) return;
+    if (n.startsWith("link")) { const l = n.slice(4); links.push({ i, k: /track/.test(l) ? "lt" : /foto/.test(l) ? "lf" : "lr" }); return; }
+    for (const [k, al] of Object.entries(ALIAS)) if (al.includes(n) && !(k in m)) { m[k] = i; break; }
+  });
+  return { map: m, links };
+}
+function toIsoDate(cell, X) {
+  if (!cell) return "";
+  if (cell.t === "n" && cell.v > 1000) { const p = X.SSF.parse_date_code(cell.v); return p ? `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}` : ""; }
+  if (cell.t === "d" && cell.v instanceof Date) { const d = cell.v; return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+  const s = String(cell.w ?? cell.v ?? "").trim();
+  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return "";
+}
+function toDur(cell) {
+  if (!cell) return "";
+  if (cell.t === "n") return minDur(cell.v < 3 ? Math.round(cell.v * 1440) : Math.round(cell.v * 60));
+  return durIn(cell.w ?? cell.v) || "";
+}
+function toNum(cell) {
+  if (!cell) return null;
+  if (cell.t === "n") return Math.round(cell.v * 100) / 100;
+  const n = numIn(cell.v); return Number.isNaN(n) ? null : n;
+}
+const toText = (cell) => cell == null ? "" : String(cell.w != null && cell.t !== "s" ? cell.w : cell.v ?? "").trim();
+function readSheet(ws, X, kind) {
+  if (!ws || !ws["!ref"]) return [];
+  const R = X.utils.decode_range(ws["!ref"]);
+  const cell = (r, c) => ws[X.utils.encode_cell({ r, c })];
+  let hdrRow = -1, hm = null;
+  for (let r = R.s.r; r <= Math.min(R.e.r, R.s.r + 15); r++) {
+    const row = []; for (let c = R.s.c; c <= R.e.c; c++) { const x = cell(r, c); row[c] = x ? x.v : ""; }
+    const h = headerMap(row);
+    if ("g" in h.map && ("s" in h.map || "prio" in h.map)) { hdrRow = r; hm = h; break; }
+  }
+  if (hdrRow < 0) return [];
+  const M = hm.map, out = [];
+  for (let r = hdrRow + 1; r <= R.e.r; r++) {
+    const get = (k) => (k in M ? cell(r, M[k]) : undefined);
+    const g = toText(get("g")), rt = toText(get("r"));
+    if (!g && !rt) continue;
+    let pos = parseCoord(toText(get("coord")));
+    if (!pos) { const la = toNum(get("lat")), lo = toNum(get("lon")); if (la != null && lo != null) pos = valid(la, lo); }
+    const o = { id: uid(kind === "tours" ? "t" : "b"), s: toText(get("s")), g, r: rt, geb: toText(get("geb")), land: toText(get("land")), h: toNum(get("h")), hm: toNum(get("hm")),
+      sch: toText(get("sch")), sl: toNum(get("sl")), txt: toText(get("txt")), lat: pos ? pos.lat : null, lon: pos ? pos.lon : null };
+    for (const lk of hm.links) {
+      const x = cell(r, lk.i); if (!x) continue;
+      const u = (x.l && x.l.Target) || (/^https?:\/\//i.test(String(x.v)) ? String(x.v).trim() : "");
+      if (u && !o[lk.k]) o[lk.k] = u;
+    }
+    const bRaw = toText(get("b"));
+    if (kind === "tours") Object.assign(o, { d: toIsoDate(get("d"), X), km: toNum(get("km")), dur: toDur(get("dur")), p: toText(get("p")), v: toText(get("v")),
+      b: (bRaw.match(/★/g) || []).length || (parseInt(bRaw, 10) || 0), ok: toText(get("ok")), mt: toText(get("mt")), tage: toNum(get("tage")) });
+    else Object.assign(o, { prio: toText(get("prio")), zeit: toText(get("zeit")) });
+    for (const k of Object.keys(o)) if (o[k] === "" || o[k] == null || (o[k] === 0 && (k === "b" || k === "tage"))) delete o[k];
+    out.push(o);
+  }
+  return out;
+}
+function findSheet(wb, names, kind) {
+  for (const n of names) { const hit = wb.SheetNames.find((s) => s.toLowerCase() === n); if (hit) return wb.Sheets[hit]; }
+  return kind === "tours" ? wb.Sheets[wb.SheetNames[0]] : null;
+}
+const tKey = (t) => `${t.d || ""}|${(t.g || "").toLowerCase()}|${(t.r || "").toLowerCase()}`;
+const bKey = (b) => `${(b.g || "").toLowerCase()}|${(b.r || "").toLowerCase()}`;
+let pendingImport = null;
+$("importXlsx").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  const st = $("xlsxStatus"); st.classList.remove("err"); st.textContent = "Lese Excel …";
+  try {
+    const X = await loadXlsx();
+    const wb = X.read(await readFile(f, false), { type: "array", cellDates: false, cellNF: false });
+    const T = readSheet(findSheet(wb, ["tourenbuch", "touren"], "tours"), X, "tours");
+    const B = readSheet(findSheet(wb, ["bucketlist", "bucket", "wunschliste"], "bucket"), X, "bucket");
+    if (!T.length && !B.length) throw new Error("Keine Touren gefunden. Erwartet wird ein Blatt »Tourenbuch« mit den Spalten Sportart und Gipfel / Ziel.");
+    const haveT = new Set(tours().map(tKey)), haveB = new Set(bucketItems().map(bKey));
+    const newT = T.filter((t) => !haveT.has(tKey(t))), newB = B.filter((b) => !haveB.has(bKey(b)));
+    pendingImport = { T, B, newT, newB, file: f.name };
+    const box = $("importBox"); box.hidden = false;
+    box.innerHTML = `<p><b>${esc(f.name)}</b>: ${T.length} Touren und ${B.length} Ziele gefunden. Neu davon: ${newT.length} Touren, ${newB.length} Ziele.</p>
+      <div class="btns" style="margin-top:8px"><button class="btn primary" type="button" id="impAdd"${newT.length + newB.length ? "" : " disabled"}>Neue übernehmen</button>
+      <button class="btn danger" type="button" id="impReplace">Alles ersetzen</button></div>
+      <p class="note" style="margin-top:8px">»Neue übernehmen« lässt bestehende Einträge unverändert. »Alles ersetzen« ersetzt das Gipfelbuch durch die Excel (der alte Stand bleibt im Verlauf auf GitHub).</p>`;
+    st.textContent = "";
+  } catch (err) { st.textContent = err.message || "Die Datei konnte nicht gelesen werden."; st.classList.add("err"); }
+});
+document.addEventListener("click", async (e) => {
+  const add = e.target.closest("#impAdd"), rep = e.target.closest("#impReplace");
+  if ((!add && !rep) || !pendingImport) return;
+  if (rep && !armed(rep, "Wirklich alles ersetzen?")) return;
+  const p = pendingImport, st = $("xlsxStatus");
+  st.classList.remove("err"); st.textContent = "Speichert …";
+  try {
+    await mutate((d) => {
+      if (rep) { d.tours = p.T; d.bucket = p.B; }
+      else {
+        const haveT = new Set(d.tours.map(tKey)), haveB = new Set(d.bucket.map(bKey));
+        for (const t of p.T) if (!haveT.has(tKey(t))) d.tours.push(t);
+        for (const b of p.B) if (!haveB.has(bKey(b))) d.bucket.push(b);
+      }
+    }, rep ? `Excel-Import (ersetzt): ${p.file}` : `Excel-Import: ${p.newT.length} Touren, ${p.newB.length} Ziele aus ${p.file}`);
+    pendingImport = null; $("importBox").hidden = true; st.textContent = "";
+    toast(rep ? "Gipfelbuch durch die Excel ersetzt." : `${p.newT.length} Touren und ${p.newB.length} Ziele übernommen.`);
+    fitAll();
+  } catch (err) { st.textContent = err.message; st.classList.add("err"); }
+});
+$("exportXlsx").addEventListener("click", async () => {
+  const st = $("xlsxStatus"); st.classList.remove("err"); st.textContent = "Erstelle Excel …";
+  try {
+    const X = await loadXlsx();
+    const serial = (iso) => { const [y, m, d] = iso.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
+    const TH = ["Datum", "Sportart", "Gipfel / Ziel", "Route", "Gebirgsgruppe", "Land", "Gipfelhöhe", "Höhenmeter", "Distanz", "Dauer", "Schwierigkeit", "Seillängen", "Partner", "Verhältnisse", "Bewertung", "Gipfel erreicht", "Beschreibung", "Link Route", "Link Track", "Link Fotos", "Koordinaten", "Mehrtagestour", "Tage"];
+    const T = [...tours()].sort((a, b) => String(a.d || "").localeCompare(String(b.d || "")));
+    const trows = T.map((t) => [/^\d{4}-\d{2}-\d{2}$/.test(t.d || "") ? serial(t.d) : (t.d || ""), t.s || "", t.g || "", t.r || "", t.geb || "", t.land || "", t.h ?? "", t.hm ?? "", t.km ?? "", t.dur ? durMin(t.dur) / 1440 : "",
+      t.sch || "", t.sl ?? "", t.p || "", t.v || "", +t.b ? "★".repeat(+t.b) : "", t.ok || "", t.txt || "", t.lr || "", t.lt || "", t.lf || "", fmtCoord(t), t.mt || "", t.tage ?? ""]);
+    const ws1 = X.utils.aoa_to_sheet([TH, ...trows]);
+    trows.forEach((row, i) => {
+      const r = i + 1;
+      const a = ws1[X.utils.encode_cell({ r, c: 0 })]; if (a && a.t === "n") a.z = "dd.mm.yyyy";
+      const j = ws1[X.utils.encode_cell({ r, c: 9 })]; if (j && j.t === "n") j.z = "[h]:mm";
+      for (const c of [17, 18, 19]) { const x = ws1[X.utils.encode_cell({ r, c })]; if (x && x.v) x.l = { Target: String(x.v) }; }
+    });
+    ws1["!cols"] = [11, 13, 24, 26, 18, 12, 10, 11, 9, 8, 12, 10, 16, 26, 10, 9, 40, 22, 22, 22, 20, 22, 6].map((w) => ({ wch: w }));
+    ws1["!autofilter"] = { ref: ws1["!ref"] };
+    const BH = ["Priorität", "Sportart", "Gipfel / Ziel", "Route", "Gebirgsgruppe", "Land", "Gipfelhöhe", "Höhenmeter", "Schwierigkeit", "Seillängen", "Beste Zeit", "Notizen", "Link Route", "Koordinaten", "Status"];
+    const brows = bucketItems().map((b) => [b.prio || "", b.s || "", b.g || "", b.r || "", b.geb || "", b.land || "", b.h ?? "", b.hm ?? "", b.sch || "", b.sl ?? "", b.zeit || "", b.txt || "", b.lr || "", fmtCoord(b), bucketDone(b) ? "erledigt" : "offen"]);
+    const ws2 = X.utils.aoa_to_sheet([BH, ...brows]);
+    ws2["!cols"] = [10, 13, 22, 24, 18, 12, 10, 11, 12, 10, 14, 40, 22, 20, 10].map((w) => ({ wch: w }));
+    ws2["!autofilter"] = { ref: ws2["!ref"] };
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, ws1, "Tourenbuch");
+    X.utils.book_append_sheet(wb, ws2, "Bucketlist");
+    X.writeFile(wb, `Gipfelbuch-${todayIso()}.xlsx`, { compression: true });
+    st.textContent = `Excel mit ${T.length} Touren und ${brows.length} Zielen erstellt.`;
+  } catch (err) { st.textContent = err.message || "Export fehlgeschlagen."; st.classList.add("err"); }
+});
+
+/* ===================== setup ===================== */
+function openSetup(canGoBack) {
+  $("setupRepo").value = state.repo; $("setupToken").value = "";
+  $("setupBack").hidden = !canGoBack; $("setupStatus").textContent = ""; $("setupStatus").classList.remove("err");
+  show("setup");
+}
+$("setupBack").addEventListener("click", () => show("browse"));
+$("setupGo").addEventListener("click", async () => {
+  const repo = $("setupRepo").value.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/$/, "");
+  const token = $("setupToken").value.trim();
+  const st = $("setupStatus"); st.classList.remove("err");
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { st.textContent = "Repository bitte als name/repository angeben, z. B. maxmm-ctrl/gipfelbuch-daten."; st.classList.add("err"); return; }
+  if (!token) { st.textContent = "Bitte den Zugangsschlüssel einfügen."; st.classList.add("err"); return; }
+  const prev = { token: state.token, repo: state.repo };
+  state.token = token; state.repo = repo; st.textContent = "Prüfe Zugang …"; $("setupGo").disabled = true;
+  try {
+    const { data, sha } = await fetchRemote();
+    lsSet(LS.token, token); lsSet(LS.repo, repo);
+    state.sha = sha; state.syncErr = ""; state.lastSync = Date.now();
+    setData(data); setSync();
+    show("browse"); fitAll();
+    toast(data.tours.length ? `Verbunden. ${data.tours.length} Touren geladen.` : "Verbunden. Dein Gipfelbuch ist noch leer.");
+  } catch (e) {
+    state.token = prev.token; state.repo = prev.repo;
+    st.textContent = e.message; st.classList.add("err");
+  } finally { $("setupGo").disabled = false; }
+});
 
 /* ===================== boot ===================== */
 (function boot() {
-  let cached = null;
-  try { cached = JSON.parse(lsGet(LS_DATA) || "null"); } catch (e) { cached = null; }
-  if (cached && ((cached.tours || []).length + (cached.bucket || []).length)) {
-    state.meta = cached.meta || null;
-    (cached.tours || []).forEach((t, i) => t._id = "t" + i);
-    (cached.bucket || []).forEach((b, i) => b._id = "b" + i);
-    state.tours = cached.tours || []; state.bucket = cached.bucket || [];
-    render(); fitAll(); setStatus(describeMeta());
-  } else {
-    render(); setStatus("Noch keine Excel geladen.");
-  }
   try {
-    const saved = JSON.parse(lsGet(LS_GPX) || "[]");
+    const c = JSON.parse(lsGet(LS.cache) || "null");
+    if (c && c.data && c.repo === state.repo) { state.data = normalize(c.data); state.sha = c.sha || null; state.lastSync = c.at || null; }
+  } catch (e) { /* ignore broken cache */ }
+  try {
+    const saved = JSON.parse(lsGet(LS.gpx) || "[]");
     if (Array.isArray(saved) && saved.length) {
       gpxItems = saved.map(unpackItem);
       gpxSeq = gpxItems.reduce((m, x) => Math.max(m, parseInt(String(x.id).slice(1), 10) || 0, ...(x.parts || []).map((y) => parseInt(String(y.id).slice(1), 10) || 0)), 0);
-      renderCards();
+      $("cards").innerHTML = gpxItems.map(cardHtml).join(""); updateGpxSave(); updateMultiBar();
     }
   } catch (e) { /* ignore a broken saved list */ }
   updateGpxBadge();
+  render(); setSync();
+  if (!state.token) { openSetup(false); return; }
+  show("browse"); fitAll();
+  sync(true).then((ok) => { if (ok) fitAll(); });
 })();
-window.__gipfelbuch = { parseGpx, analyzeTrack, toTsv, parseCoord, guessSport, state };
+window.__gipfelbuch = { parseGpx, analyzeTrack, parseCoord, state, numIn, durIn };
 })();
 </script>
 </body>

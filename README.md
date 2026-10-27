@@ -1,16 +1,18 @@
-# Gipfelbuch-Karte
+# Gipfelbuch
 
-Persönliche Karte zum Excel-Gipfelbuch: alle Touren und Bucketlist-Ziele auf einer topografischen Karte, dazu ein Werkzeug, das GPX-Dateien auswertet und daraus eine fertige Excel-Zeile macht.
+Persönliches Gipfel- und Tourenbuch als Web-App: topografische Karte, GPX-Auswertung, Bucketlist, Mehrtagestouren und Statistik.
 
-**Datenschutz:** Die Seite enthält keine Touren. Die Excel-Datei wird nur im eigenen Browser gelesen und nirgends hochgeladen. Für Gipfelvorschläge werden nur die Koordinaten des höchsten Track-Punkts an OpenStreetMap (Overpass, Nominatim) geschickt.
+**Datenschutz:** Diese Seite ist öffentlich, enthält aber keine Touren. Die Daten liegen in einem privaten Repository (`gipfelbuch.json`) und werden nur mit einem persönlichen Zugangsschlüssel geladen und gespeichert, der auf dem jeweiligen Gerät bleibt. Für Gipfelvorschläge und die Gipfelsuche gehen Koordinaten bzw. Suchbegriffe an OpenStreetMap (Overpass, Nominatim).
 
 ## Benutzung
 
-- **Excel laden:** Gipfelbuch-Datei wählen (am iPhone über die Dateien-App, z. B. OneDrive). Jedes Gerät merkt sich den zuletzt geladenen Stand.
-- **Neue Tour aus GPX:** GPX-Datei wählen → die Seite berechnet Datum, Dauer, Distanz, Höhenmeter und den höchsten Punkt und schlägt den Gipfel vor → Sportart ergänzen → »Zeile kopieren« → in Excel im Tourenbuch Spalte A der ersten freien Zeile unter der Tabelle anklicken → Einfügen.
-- **Mehrere Touren auf einmal:** beliebig viele GPX-Dateien in die Liste laden (auch über mehrere Tage, die Liste bleibt auf dem Gerät gespeichert). »Zeilen kopieren« überträgt alle angehakten Touren in einem Rutsch.
-- **Mehrtagestouren:** mehrere angehakte GPX entweder »Als Mehrtagestour verknüpfen« (jede Etappe eine Zeile, gemeinsamer Name, auf der Karte verbunden) oder »Zu einer Zeile zusammenführen« (Höhenmeter, Distanz und Zeit addiert, Spalte »Tage« gesetzt).
-- **Kartenarten:** Ebenen-Symbol rechts oben (OpenTopoMap, OpenHikingMap, swisstopo, Satellit).
+- **Einrichten (einmal pro Gerät):** Fine-grained Token mit Zugriff nur auf das Datenrepository und der Berechtigung »Contents: Read and write« erstellen und in der App einfügen.
+- **GPX importieren:** eine oder mehrere Workout-GPX wählen. Die App berechnet Datum, Dauer, Distanz, Höhenmeter und den höchsten Punkt und schlägt Gipfel und Land vor. Mehrere Dateien lassen sich als Mehrtagestour verknüpfen oder zu einer Tour zusammenführen.
+- **Tour von Hand:** Formular mit Gipfelsuche und Punkt auf der Karte.
+- **Bucketlist:** Ziele mit Priorität. Sobald derselbe Gipfel (und ggf. die Route) im Gipfelbuch steht, gilt das Ziel als erledigt.
+- **Statistik:** Touren, Gipfel, Tage, Höhenmeter pro Jahr und Sportart, Mehrtagestouren.
+- **Excel:** Export als Backup, Import aus einer Excel-Liste.
+- Jede Änderung ist ein Commit im Datenrepository, der Verlauf ist dort einsehbar und wiederherstellbar.
 
 ## Kartendaten
 
