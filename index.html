@@ -255,6 +255,7 @@ table.t td.num, table.t th.num { text-align: right; }
 .pill.goal { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
 .stars { color: #D9A521; letter-spacing: 1px; }
 
+.sheet-high .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 .toast { position: fixed; z-index: 2000; left: 50%; bottom: calc(max(var(--sheet-vis, 0px), 68px) + 12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 8px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
 
 /* map picker (replaces the small Leaflet layer menu) */
@@ -286,7 +287,7 @@ table.t td.num, table.t th.num { text-align: right; }
 /* phone: full-screen map with the panel as a bottom sheet that snaps to three heights */
 @media (max-width: 760px) {
   .app { display: block; position: relative; overflow: hidden; }
-  .map-wrap { position: absolute; inset: 0; }
+  .map-wrap { position: absolute; inset: 0; z-index: 0; }
   .panel { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1000; height: 52%; border: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -1px 0 var(--line), 0 -10px 30px rgba(15,25,35,.18); overflow: hidden; will-change: transform; }
   .panel.anim { transition: transform .36s cubic-bezier(.2,.85,.25,1); }
   .app.setup .panel { height: 100% !important; transform: none !important; border-radius: 0; }
@@ -295,8 +296,10 @@ table.t td.num, table.t th.num { text-align: right; }
   .app.setup .grip { display: none; }
   .panel .head, .panel .vh { touch-action: none; }
   .panel.peek #v-browse > .foot { display: none; }
-  .leaflet-bottom { bottom: var(--sheet-vis, 0px); transition: bottom .36s cubic-bezier(.2,.85,.25,1); }
-  .app.mapfull .leaflet-bottom { bottom: 0; }
+  .leaflet-bottom { transform: translateY(calc(var(--sheet-vis, 0px) * -1)); transition: transform .36s cubic-bezier(.2,.85,.25,1), opacity .2s; }
+  .sheet-drag .leaflet-bottom { transition: opacity .2s; }
+  .sheet-high .leaflet-bottom { opacity: 0; pointer-events: none; }
+  .app.mapfull .leaflet-bottom { transform: none; opacity: 1; pointer-events: auto; }
   .mappick { top: 54px; max-height: calc(100% - var(--sheet-vis, 0px) - 66px); }
   .mapctl .lbl { display: none; }
   #v-browse { overflow-y: auto; }
@@ -905,9 +908,8 @@ const MapControl = L.Control.extend({
   options: { position: "topleft" },
   onAdd() {
     const d = L.DomUtil.create("div", "leaflet-bar fitctl");
-    d.innerHTML = `<button type="button" id="fitBtn" title="Alle Punkte zeigen">Alle zeigen</button><button type="button" id="fullBtn" aria-pressed="false" aria-label="Karte im Vollbild" title="Karte im Vollbild">${ICON_FULL}</button>`;
+    d.innerHTML = `<button type="button" id="fullBtn" aria-pressed="false" aria-label="Karte im Vollbild" title="Karte im Vollbild">${ICON_FULL}</button>`;
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
-    d.querySelector("#fitBtn").addEventListener("click", () => fitAll());
     d.querySelector("#fullBtn").addEventListener("click", () => setMapFull(!$("app").classList.contains("mapfull")));
     return d;
   }
@@ -934,7 +936,11 @@ function sheetHeights() {
   const peek = Math.min(Math.round(H * 0.45), 26 + (hd ? hd.offsetHeight : 90) + sabPx);
   return { peek, half: Math.max(peek + 60, Math.round(H * 0.5)), full: H - Math.min(64, Math.round(H * 0.08)) };
 }
-function setSheetVis(h) { document.documentElement.style.setProperty("--sheet-vis", h + "px"); }
+function setSheetVis(h) {
+  const el = document.documentElement;
+  el.style.setProperty("--sheet-vis", Math.round(h) + "px");
+  el.classList.toggle("sheet-high", h > $("app").clientHeight * 0.66);
+}
 function sheetVisible() {
   if (!isPhone() || $("app").classList.contains("mapfull") || state.view === "setup") return 0;
   return Math.min(sheet.h, Math.round(map.getSize().y * 0.6));
@@ -983,12 +989,14 @@ function applySheet(snap, animate) {
     if (vis < d.hs.peek) vis = d.hs.peek - (d.hs.peek - vis) * 0.3; // rubber band below the smallest height
     vis = Math.max(40, Math.min(vis, d.hs.full));
     d.vis = vis; P.style.transform = `translateY(${d.hs.full - vis}px)`;
+    document.documentElement.classList.add("sheet-drag"); setSheetVis(vis);
     d.samples.push([e.timeStamp, e.clientY]); if (d.samples.length > 5) d.samples.shift();
     e.preventDefault();
   });
   const end = (e) => {
     if (!d || (e && e.pointerId !== d.id)) return;
     const dd = d; d = null;
+    document.documentElement.classList.remove("sheet-drag");
     if (!dd.moved) { if (dd.grip) applySheet(sheet.snap === "peek" ? "half" : sheet.snap === "half" ? "full" : "half", true); return; }
     const [t0, y0] = dd.samples[0], [t1, y1] = dd.samples[dd.samples.length - 1];
     const v = t1 > t0 ? (y0 - y1) / (t1 - t0) : 0; // px per ms, positive = upwards

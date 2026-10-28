@@ -14,7 +14,7 @@ Persönliches Gipfel- und Tourenbuch als Web-App: topografische Karte, GPX-Auswe
 - **Karte:** ▲ Gipfel, ● Routen ohne Gipfel, gestrichelter Ring = Bucketlist; alle drei unter »Auf der Karte« ein- und ausblendbar. Ein Tipp auf einen Punkt zeigt die Details in der Leiste und den Track der Tour in Rot, bei Mehrtagestouren alle Etappen. Stufenloser Zoom mit Mausrad, Trackpad und Fingern.
 - **Kartenauswahl** (Knopf »Karte« oben rechts): OpenTopoMap, Mapy.com Outdoor, Satellit (Esri), Sentinel-2 Tagesbild mit Datum und Zeitraum, basemap.at (Karte, Laserscan-Gelände, Orthofoto), swisstopo Landeskarte, Kartverket Topo. Beschriftungen gehören automatisch zu Luftbildern; außerhalb ihres Landes zeigen die amtlichen Karten OpenTopoMap darunter. Darüber zuschaltbar: Wanderwege, Pisten & Loipen, berechnete Hangneigung, Straßen, alle Tracks.
 - **Einstellungen → Karten:** Startkarte sowie die kostenlosen Schlüssel für Mapy.com und Copernicus (Sentinel-2); sie liegen im privaten Daten-Repository. Anleitung im Kartenvergleich (`karten.html`).
-- **Handy:** die Liste ist ein Blatt über der Karte, das in drei Höhen einrastet (ziehen oder Griff antippen); Vollbild über den Knopf neben »Alle zeigen«.
+- **Handy:** die Liste ist ein Blatt über der Karte, das in drei Höhen einrastet (ziehen oder Griff antippen); Vollbild über den Knopf links oben.
 - **Gipfel ja/nein:** Schalter »Gipfel« im Formular (standardmäßig an). Routen ohne Gipfel zählen nicht in der Gipfelstatistik, Gipfel am Weg zählen trotzdem.
 - **Mehrtagestouren:** ein Tipp auf den Namen (↔) öffnet die Übersicht mit Zeitraum, Summen, Gipfeln und Etappen.
 - **Bucketlist:** Ziele mit Priorität. Sobald derselbe Gipfel (und ggf. die Route) im Gipfelbuch steht, gilt das Ziel als erledigt.
