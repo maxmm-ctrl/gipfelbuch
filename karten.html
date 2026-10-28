@@ -16,7 +16,7 @@
 /* Layout: a slim header, then one or two synchronised maps side by side (stacked on the phone), each with its own map choice, overlays and a short fact strip. Same palette and type as the Gipfelbuch. */
 :root {
   --bg: #F7F8F6; --surface: #FFFFFF; --fg: #1C242C; --muted: #5E6B78; --line: #DCE1E5; --chip: #EDF0F2;
-  --accent: #C8102E; --accent-fg: #FFFFFF; --ok: #2E7D4F; --warn: #9A5B00;
+  --accent: #1E3A5F; --accent-fg: #FFFFFF; --ok: #2E7D4F; --warn: #9A5B00;
   --f-display: "Source Serif 4", Georgia, "Times New Roman", serif;
   --f-body: "Source Sans 3", -apple-system, system-ui, "Segoe UI", sans-serif;
   --shadow: 0 1px 2px rgba(20,30,40,.08), 0 6px 20px rgba(20,30,40,.12);
@@ -25,14 +25,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
-    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548;
+    --accent: #8DB3E2; --accent-fg: #12171C; --ok: #5CC28A; --warn: #E0A548;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
-  --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548;
+  --accent: #8DB3E2; --accent-fg: #12171C; --ok: #5CC28A; --warn: #E0A548;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
   color-scheme: dark;
 }

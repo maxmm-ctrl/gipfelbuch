@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
 <style>
-/* Layout: full-height topo map with a side panel (desktop) or a resizable panel below the map (phone). Serif headings like a logbook, red summit mark as the one accent. */
+/* Layout: full-height topo map with a side panel (desktop) or a resizable panel below the map (phone). Serif headings like a logbook, night blue as the one accent (tracks stay red). */
 :root {
   --bg: #F7F8F6;
   --surface: #FFFFFF;
@@ -26,7 +26,8 @@
   --muted: #5E6B78;
   --line: #DCE1E5;
   --chip: #EDF0F2;
-  --accent: #C8102E;
+  --accent: #1E3A5F;
+  --danger: #B42318;
   --accent-fg: #FFFFFF;
   --ok: #2E7D4F;
   --warn: #9A5B00;
@@ -39,14 +40,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
-    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
+    --accent: #8DB3E2; --accent-fg: #12171C; --danger: #F0707A; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
     --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
-    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
+    --accent: #8DB3E2; --accent-fg: #12171C; --danger: #F0707A; --ok: #5CC28A; --warn: #E0A548; --bar: #8FA9C4;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
     color-scheme: dark;
 }
@@ -78,9 +79,9 @@ h3.sec { font: 600 12.5px/1.2 var(--f-body); letter-spacing: .09em; text-transfo
 .stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13.5px; }
 .stats b { color: var(--fg); font-weight: 600; font-size: 15px; }
 .sync { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.sync.err { color: var(--accent); }
+.sync.err { color: var(--danger); }
 .sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
-.sync.err .dot { background: var(--accent); }
+.sync.err .dot { background: var(--danger); }
 .sync.busy .dot { background: var(--warn); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; font-size: inherit; }
 
@@ -135,14 +136,14 @@ textarea { resize: vertical; min-height: 70px; }
 .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: var(--fg); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-.btn.danger { color: var(--accent); }
-.btn.danger.armed { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.danger { color: var(--danger); }
+.btn.danger.armed { background: var(--danger); color: #FFFFFF; border-color: var(--danger); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn.grow { flex: 1 1 auto; }
 .iconbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; min-width: 36px; height: 36px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 13.5px; font-weight: 600; flex: none; color: var(--fg); }
 .iconbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .status { font-size: 12.5px; color: var(--muted); }
-.status.err { color: var(--accent); }
+.status.err { color: var(--danger); }
 
 .vh { display: flex; align-items: center; gap: 10px; padding-block: 14px 12px; border-bottom: 1px solid var(--line); }
 .body { padding-block: 12px 20px; display: grid; gap: 12px; align-content: start; }
