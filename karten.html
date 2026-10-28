@@ -62,6 +62,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 .pane:first-child { border-left: 0; }
 .bar { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--surface); position: relative; z-index: 1001; }
 .bar select { flex: 1 1 auto; }
+.bar select[data-win] { flex: none; }
 .bar input[type="date"] { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; font-size: 14px; min-height: 34px; flex: none; }
 .bar:has(.ovl[open]) { z-index: 1200; }
 .ovl { position: relative; flex: none; }
@@ -142,8 +143,8 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 <div class="sheet" id="keySheet" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="keyTitle">
-    <h2 id="keyTitle">Schlüssel für Mapy.com</h2>
-    <p>Mapy.com ist für private Nutzung kostenlos, verlangt aber eine Anmeldung und einen persönlichen Schlüssel. Hier eingetragen bleibt er nur in diesem Browser; im Gipfelbuch kommt er später in dein privates Daten-Repository.</p>
+    <h2 id="keyTitle">Schlüssel</h2>
+    <p>Mapy.com und Copernicus sind für private Nutzung kostenlos, verlangen aber eine Anmeldung und einen persönlichen Schlüssel. Hier eingetragen bleiben sie nur in diesem Browser; im Gipfelbuch kommen sie später in dein privates Daten-Repository.</p>
     <div id="keyRows" style="display:grid;gap:12px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="keyClose" type="button">Fertig</button></div>
   </div>
@@ -166,6 +167,12 @@ const PROVIDERS = {
       "Beim Schlüssel unter HTTP-Referrer maxmm-ctrl.github.io eintragen und unter Service Access nur »Map tiles« erlauben. So kann ihn niemand anderer verwenden.",
       "Den Schlüssel kopieren und hier einfügen."] }
 };
+PROVIDERS.copernicus = { name: "Copernicus (Sentinel-2)", field: "Instance ID", signup: "https://dataspace.copernicus.eu/", hint: "Kostenlos, etwa 10 000 Kartenkacheln pro Monat (große 512-px-Kacheln, reicht für rund tausend Kartenansichten).",
+  steps: ["Auf dataspace.copernicus.eu oben rechts »Register« wählen und ein kostenloses Konto anlegen (E-Mail bestätigen).",
+    "Das Sentinel-Hub-Dashboard öffnen: shapps.dataspace.copernicus.eu/dashboard – mit demselben Konto anmelden.",
+    "Links »Configuration Utility« öffnen. Dort gibt es schon eine Konfiguration »Simple WMS Instance«. Falls nicht: »New configuration«, als Vorlage »Simple WMS template« wählen und speichern.",
+    "Die Konfiguration anklicken und ihre ID kopieren (eine lange Zeichenfolge mit Bindestrichen, z. B. 1a2b3c4d-…).",
+    "Die ID hier einfügen."] };
 let keys = {}; try { keys = JSON.parse(lsGet("kv-keys") || "{}") || {}; } catch (e) { keys = {}; }
 
 /* ---------- catalogue ---------- */
@@ -186,7 +193,10 @@ const BASES = [
     cov: "Europa sehr gut, weltweit", cost: "Schlüssel, 250 000 Kacheln/Monat gratis", note: "Wanderkarte mit markierten Wegen in ihren Wegfarben, Höhenlinien und Schummerung. Optisch am nächsten an Kompass." },
   { id: "esri-img", g: "Weltweit", n: "Esri Satellit", now: true, autoOvl: ["o-labels"], u: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 19, attribution: "Bild: © Esri, Maxar, Earthstar Geographics" },
     cov: "weltweit", cost: "frei mit Quellenangabe", note: "Satellitenbild mit Esri-Beschriftung. Unter Overlays lassen sich Straßen und Wanderwege dazunehmen." },
-  { id: "modis", g: "Weltweit", n: "Satellit Tagesbild (NASA, 250 m)", date: true, u: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg", o: { maxNativeZoom: 9, attribution: 'Bild: <a href="https://www.earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a>, MODIS Terra' },
+  { id: "s2", g: "Weltweit", key: "copernicus", n: "Sentinel-2 Tagesbild (10 m)", date: true, wms: true, autoOvl: ["o-labels"], site: "https://browser.dataspace.copernicus.eu/",
+    o: { maxNativeZoom: 14, attribution: 'Bild: Copernicus Sentinel-2, über <a href="https://dataspace.copernicus.eu" target="_blank" rel="noopener">Copernicus Data Space</a>' },
+    cov: "weltweit, alle 2–5 Tage ein neues Bild seit 2017", cost: "Konto, ca. 10 000 Kacheln/Monat gratis", note: "Echtes Satellitenbild eines gewählten Tages mit 10 m pro Pixel: Schneelage, Lawinenkegel und Spuren großer Hänge werden sichtbar. Gezeigt wird das wolkenärmste Bild aus dem gewählten Zeitraum bis zum Datum. Mit Esri-Beschriftung." },
+  { id: "modis", g: "Weltweit", n: "Satellit Tagesbild (NASA, 250 m)", date: true, autoOvl: ["o-labels"], u: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg", o: { maxNativeZoom: 9, attribution: 'Bild: <a href="https://www.earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a>, MODIS Terra' },
     cov: "weltweit, jeder Tag seit 2000", cost: "frei", note: "Das Satellitenbild eines bestimmten Tages, also auch im Winter: zeigt, wo Schnee liegt und wo Wolken sind. Nur 250 m pro Pixel, gut für die Schneelage einer ganzen Region, nicht für einzelne Hänge. Schärfer (10 m) geht es mit Sentinel-2 im Copernicus Browser." },
 
   { id: "bm-std", g: "Österreich (basemap.at)", n: "basemap.at Standard", u: bm("geolandbasemap", "png"), o: { ...BM, maxNativeZoom: 20, bounds: AT },
@@ -202,8 +212,8 @@ const BASES = [
     cov: "nur Norwegen", cost: "frei", note: "Die offizielle norwegische Topokarte mit Höhenlinien, Hütten und markierten Wegen. Für Lyngen und die Hardangervidda deutlich besser als OpenTopoMap." }
 ];
 const OVERLAYS = [
-  { id: "o-labels", g: "Beschriftung & Wege", only: ["esri-img"], n: "Beschriftung (Esri)", u: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 19, attribution: "Beschriftung: © Esri" }, note: "Orts-, Berg- und Ländernamen. Gehört zum Esri-Satellitenbild und ist automatisch an." },
-  { id: "o-roads", g: "Beschriftung & Wege", only: ["esri-img"], n: "Straßen (Esri)", u: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 19, attribution: "Straßen: © Esri" }, note: "Straßen und Bahnen für Luftbilder, weltweit." },
+  { id: "o-labels", g: "Beschriftung & Wege", only: ["esri-img", "s2", "modis"], n: "Beschriftung (Esri)", u: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 19, attribution: "Beschriftung: © Esri" }, note: "Orts-, Berg- und Ländernamen für Satellitenbilder, automatisch an." },
+  { id: "o-roads", g: "Beschriftung & Wege", only: ["esri-img", "s2"], n: "Straßen (Esri)", u: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 19, attribution: "Straßen: © Esri" }, note: "Straßen und Bahnen für Luftbilder, weltweit." },
   { id: "o-bm", g: "Beschriftung & Wege", only: ["bm-ortho", "bm-gel"], n: "Beschriftung (basemap.at)", u: bm("bmapoverlay", "png"), o: { ...BM, maxNativeZoom: 20, bounds: AT }, note: "Namen, Straßen und Gebäude. Gehört zu Orthofoto und Gelände und ist automatisch an." },
   { id: "o-hike", g: "Beschriftung & Wege", n: "Wanderwege (Waymarked Trails)", u: "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", o: { maxNativeZoom: 17, attribution: 'Wanderwege: <a href="https://hiking.waymarkedtrails.org" target="_blank" rel="noopener">waymarkedtrails.org</a> · ' + OSM }, note: "Markierte Wanderrouten in Farbe, weltweit. Macht aus jedem Luftbild eine Wanderkarte." },
   { id: "o-pistes", g: "Winter", n: "Pisten & Loipen (OpenSnowMap)", u: "https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png", o: { maxNativeZoom: 18, attribution: 'Pisten: <a href="https://www.opensnowmap.org" target="_blank" rel="noopener">OpenSnowMap</a> · ' + OSM }, note: "Skipisten, Lifte, Loipen und in OpenStreetMap eingetragene Skitouren, weltweit." },
@@ -288,12 +298,12 @@ let saved = {}; try { saved = JSON.parse(lsGet("kv-state") || "{}") || {}; } cat
 const state = {
   split: saved.split !== false,
   A: { base: BASES.some((b) => b.id === saved.Abase) ? saved.Abase : "otm-r", ovl: (Array.isArray(saved.Aovl) ? saved.Aovl : []).filter((id) => OVERLAYS.some((o) => o.id === id)) },
-  date: saved.date || "",
+  date: saved.date || "", win: [1, 5, 15, 30, 60].includes(saved.win) ? saved.win : 15,
   B: { base: BASES.some((b) => b.id === saved.Bbase) ? saved.Bbase : "bm-ortho", ovl: (Array.isArray(saved.Bovl) ? saved.Bovl : ["o-bm"]).filter((id) => OVERLAYS.some((o) => o.id === id)) },
   smooth: saved.smooth !== false,
   view: saved.view || { lat: 47.4752, lon: 13.6057, z: 13 }, showTours: saved.showTours !== false
 };
-const persist = () => lsSet("kv-state", JSON.stringify({ date: state.date, split: state.split, Abase: state.A.base, Aovl: state.A.ovl, Bbase: state.B.base, Bovl: state.B.ovl, view: state.view, showTours: state.showTours, smooth: state.smooth }));
+const persist = () => lsSet("kv-state", JSON.stringify({ date: state.date, win: state.win, split: state.split, Abase: state.A.base, Aovl: state.A.ovl, Bbase: state.B.base, Bovl: state.B.ovl, view: state.view, showTours: state.showTours, smooth: state.smooth }));
 
 for (const sd of ["A", "B"]) {
   state[sd].ovl = state[sd].ovl.filter((id) => fits(byId(id), state[sd].base));
@@ -361,6 +371,7 @@ function buildPane(side) {
   const el = $("pane" + side);
   el.innerHTML = `<div class="bar"><select data-base aria-label="Karte ${side === "A" ? "links" : "rechts"}">${baseOptions(state[side].base)}</select>
     <input type="date" data-date aria-label="Aufnahmetag" hidden>
+    <select data-win aria-label="Zeitraum vor dem Datum" hidden>${[[1, "nur dieser Tag"], [5, "5 Tage"], [15, "15 Tage"], [30, "30 Tage"], [60, "60 Tage"]].map(([v, t]) => `<option value="${v}"${v === state.win ? " selected" : ""}>${t}</option>`).join("")}</select>
     <details class="ovl"><summary>Overlays <span class="n" data-n></span></summary><div class="ovlist">${ovlList(side)}</div></details></div>
     <div class="mapbox"><div class="map"></div><div class="keyneed" hidden></div></div>
     <div class="info" aria-live="polite"></div>`;
@@ -384,6 +395,7 @@ function buildPane(side) {
     setOverlays(P); persist();
   });
   el.querySelector(".info").addEventListener("click", (e) => { if (e.target.closest("[data-more]")) el.querySelector(".info").classList.toggle("more"); });
+  el.querySelector("[data-win]").addEventListener("change", (e) => { state.win = +e.target.value; persist(); for (const Q of Object.values(panes)) { const w = Q.el.querySelector("[data-win]"); if (w) w.value = String(state.win); if (byId(state[Q.side].base).wms) setBase(Q); } });
   el.querySelector("[data-date]").addEventListener("change", (e) => { if (e.target.value) { state.date = e.target.value; persist(); for (const Q of Object.values(panes)) if (byId(state[Q.side].base).date) setBase(Q); } });
   map.on("moveend", () => { const c = map.getCenter(); state.view = { lat: +c.lat.toFixed(5), lon: +c.lng.toFixed(5), z: +map.getZoom().toFixed(2) }; persist(); renderInfo(P); });
   setBase(P); setOverlays(P); drawTours(P);
@@ -399,7 +411,45 @@ function track(P, id, layer, def) {
   layer.on("load", () => renderInfo(P));
   return layer;
 }
+// Sentinel Hub: the true-colour layer name depends on the configuration template; read it from GetCapabilities once
+const S2_GUESS = ["TRUE-COLOR", "TRUE_COLOR", "NATURAL-COLOR", "1_TRUE_COLOR", "TRUE-COLOR-S2L2A", "TRUE_COLOR_S2L2A"];
+let s2Layer = lsGet("kv-s2layer") || "", s2Probe = null;
+function s2Detect(id) {
+  if (s2Probe) return s2Probe;
+  s2Probe = fetch(`https://sh.dataspace.copernicus.eu/ogc/wms/${encodeURIComponent(id)}?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0`).then((r) => r.ok ? r.text() : Promise.reject(new Error("HTTP " + r.status))).then((xml) => {
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    const names = [...doc.querySelectorAll("Layer > Name")].map((n) => n.textContent.trim()).filter(Boolean);
+    const pick = names.find((n) => /^(1_)?TRUE[-_]?COLOU?R/i.test(n)) || names.find((n) => /NATURAL/i.test(n)) || names.find((n) => /TRUE/i.test(n));
+    if (pick) { s2Layer = pick; lsSet("kv-s2layer", pick); }
+    return s2Layer;
+  }).catch(() => s2Layer);
+  return s2Probe;
+}
+const isoMinus = (iso, days) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - days); return d.toISOString().slice(0, 10); };
+function s2TileLayer(P, def, name) {
+  const to = state.date || yesterday(), from = isoMinus(to, Math.max(0, state.win - 1));
+  return L.tileLayer.wms(`https://sh.dataspace.copernicus.eu/ogc/wms/${encodeURIComponent(keys.copernicus)}`, {
+    layers: name, format: "image/jpeg", transparent: false, version: "1.3.0", uppercase: true, tileSize: 512, maxZoom: 20, ...def.o,
+    time: `${from}/${to}`, maxcc: 60, priority: "leastCC", showlogo: false, upsampling: "BICUBIC"
+  });
+}
+function makeS2(P, def) {
+  const group = L.layerGroup(); let tries = 0;
+  const attach = (name) => {
+    group.clearLayers();
+    const layer = track(P, def.id, s2TileLayer(P, def, name), def);
+    // wrong layer name → every tile fails: try the next common name
+    layer.on("tileerror", () => { const st = P.stat.get(def.id); if (st && st.ok === 0 && st.err >= 2 && !s2Layer && tries < S2_GUESS.length - 1) { tries++; layer.off(); attach(S2_GUESS[tries]); } });
+    layer.once("tileload", () => { if (!s2Layer) { s2Layer = name; lsSet("kv-s2layer", name); } });
+    group.addLayer(layer);
+  };
+  if (s2Layer) attach(s2Layer);
+  else s2Detect(keys.copernicus).then((n) => { if (P.base === group) attach(n || S2_GUESS[0]); });
+  group.bringToBack = () => group.eachLayer((l) => l.bringToBack());
+  return group;
+}
 function makeLayer(P, def, isBase) {
+  if (def.wms) return keys[def.key] ? makeS2(P, def) : null;
   if (def.custom === "slope") return track(P, def.id, new SlopeLayer(), def);
   if (def.key && !keys[def.key] && !def.optionalKey) return null;
   const o = { maxZoom: 20, ...def.o }; if (!isBase) o.zIndex = 10;
@@ -411,7 +461,8 @@ function setBase(P) {
   P.base = makeLayer(P, def, true);
   if (P.base) { P.base.addTo(P.map); P.base.bringToBack(); }
   const di = P.el.querySelector("[data-date]");
-  di.hidden = !def.date; if (def.date) { di.max = yesterday(); di.min = "2000-03-01"; di.value = state.date || yesterday(); }
+  P.el.querySelector("[data-win]").hidden = !def.wms;
+  di.hidden = !def.date; if (def.date) { di.max = yesterday(); di.min = def.wms ? "2017-01-01" : "2000-03-01"; di.value = state.date || yesterday(); }
   const kn = P.el.querySelector(".keyneed");
   if (!P.base && def.key) {
     const pr = PROVIDERS[def.key];
@@ -462,7 +513,7 @@ function renderInfo(P) {
   const def = byId(state[P.side].base) || BASES[0];
   const [cls, txt] = statusOf(P, def, P.base);
   const free = !def.key;
-  P.el.querySelector(".info").innerHTML = `<div class="tags"><span class="name">${esc(def.n)}</span>${def.now ? '<span class="tag now">jetzt im Gipfelbuch</span>' : ""}<span class="tag ${free ? "free" : "key"}">${esc(def.cost)}</span><span class="tag">${esc(def.cov)}</span><span class="st ${cls}">${esc(txt)}</span><button class="linkbtn" type="button" data-more style="border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:12.5px">Info</button>${def.date || def.id === "esri-img" || def.id === "bm-ortho" ? `<a href="${esc(copernicusLink(P))}" target="_blank" rel="noopener" style="font-weight:600;font-size:12.5px;text-decoration:none">Winterbild Sentinel-2 ↗</a>` : ""}</div><p>${esc(def.note)}</p>`;
+  P.el.querySelector(".info").innerHTML = `<div class="tags"><span class="name">${esc(def.n)}</span>${def.now ? '<span class="tag now">jetzt im Gipfelbuch</span>' : ""}<span class="tag ${free ? "free" : "key"}">${esc(def.cost)}</span><span class="tag">${esc(def.cov)}</span><span class="st ${cls}">${esc(txt)}</span><button class="linkbtn" type="button" data-more style="border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:12.5px">Info</button>${(def.date && !def.wms) || def.id === "esri-img" || def.id === "bm-ortho" ? `<a href="${esc(copernicusLink(P))}" target="_blank" rel="noopener" style="font-weight:600;font-size:12.5px;text-decoration:none">Winterbild Sentinel-2 ↗</a>` : ""}</div><p>${esc(def.note)}</p>`;
   for (const id of state[P.side].ovl) {
     const o = byId(id), span = P.el.querySelector(`[data-st="${id}"]`); if (!o || !span) continue;
     const [c2, t2] = statusOf(P, o, P.ovl.get(id)); span.className = "st " + c2; span.textContent = t2 ? " · " + t2 : "";
@@ -521,12 +572,13 @@ $("zoomBtn").addEventListener("click", () => { state.smooth = !state.smooth; app
 /* ---------- keys ---------- */
 function renderKeyRows() {
   $("keyRows").innerHTML = Object.entries(PROVIDERS).map(([id, p]) => `<div class="keyrow"><label for="key-${id}">${esc(p.name)} <a href="${esc(p.signup)}" target="_blank" rel="noopener">Kostenlos anmelden ↗</a></label>
-    <input id="key-${id}" data-key="${id}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel einfügen" value="${esc(keys[id] || "")}"><small>${esc(p.hint)}</small>
+    <input id="key-${id}" data-key="${id}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(p.field || "Schlüssel")} einfügen" value="${esc(keys[id] || "")}"><small>${esc(p.hint)}</small>
     ${p.steps ? `<ol class="steps">${p.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : ""}</div>`).join("");
 }
 function openKeys() { renderKeyRows(); $("keySheet").hidden = false; }
 function closeKeys() {
   for (const inp of document.querySelectorAll("[data-key]")) { const v = inp.value.trim(); if (v) keys[inp.dataset.key] = v; else delete keys[inp.dataset.key]; }
+  if ((keys.copernicus || "") !== (lsGet("kv-s2id") || "")) { s2Layer = ""; s2Probe = null; lsSet("kv-s2layer", ""); lsSet("kv-s2id", keys.copernicus || ""); }
   lsSet("kv-keys", JSON.stringify(keys));
   $("keySheet").hidden = true;
   for (const P of Object.values(panes)) {
