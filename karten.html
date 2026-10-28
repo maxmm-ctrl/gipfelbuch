@@ -159,7 +159,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ign
 
 /* ---------- providers that need a free personal key ---------- */
 const PROVIDERS = {
-  mapy: { name: "Mapy.com", signup: "https://developer.mapy.com/en/my-account/", hint: "Kostenlos, 250 000 Kacheln pro Monat, keine Kreditkarte.",
+  mapy: { name: "Mapy.com", signup: "https://developer.mapy.com/en/my-account/", hint: "Kostenlos bis 250 000 Kacheln pro Monat. Kosten entstehen nur, wenn du bezahlte Nutzung selbst einschaltest.",
     steps: ["Auf developer.mapy.com oben rechts »My Account« öffnen und mit einem Seznam-Konto anmelden (dort auch neu registrieren).",
       "Ein neues API-Projekt anlegen, z. B. »Gipfelbuch«. Der erste Schlüssel wird automatisch erstellt.",
       "Beim Schlüssel unter HTTP-Referrer maxmm-ctrl.github.io eintragen und unter Service Access nur »Map tiles« erlauben. So kann ihn niemand anderer verwenden.",
