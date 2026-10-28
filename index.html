@@ -1406,29 +1406,48 @@ async function fetchJson(url, opts, ms = 20000) {
   try { const r = await fetch(url, { ...opts, signal: ctl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
   finally { clearTimeout(tm); }
 }
-async function overpass(q) {
-  let last = null;
-  for (const url of OVERPASS_URLS) {
-    try {
-      const d = await fetchJson(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } }, 25000);
-      if (d && d.remark && /error|timed out|runtime/i.test(d.remark) && !(d.elements || []).length) throw new Error(d.remark);
-      return d;
-    } catch (e) { last = e; }
-  }
-  throw last || new Error("Overpass nicht erreichbar");
+// Ask Overpass servers with a head start: if the first one has not answered after 3 s (or fails),
+// the next one is asked as well; the first good answer wins and the others are cancelled.
+function overpass(q) {
+  return new Promise((resolve, reject) => {
+    let next = 0, running = 0, done = false, lastErr = null, hedgeT = null;
+    const ctls = new Set();
+    const finish = (ok, val) => { if (done) return; done = true; clearTimeout(hedgeT); ctls.forEach((c) => c.abort()); ok ? resolve(val) : reject(val); };
+    const launch = () => {
+      if (done || next >= OVERPASS_URLS.length) return;
+      const url = OVERPASS_URLS[next++]; running++;
+      const ctl = new AbortController(); ctls.add(ctl);
+      const tm = setTimeout(() => ctl.abort(), 20000);
+      clearTimeout(hedgeT); hedgeT = setTimeout(launch, 3000);
+      fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ctl.signal })
+        .then(async (r) => {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const d = await r.json();
+          if (d && d.remark && /error|timed out|runtime/i.test(d.remark) && !(d.elements || []).length) throw new Error(d.remark);
+          ctls.delete(ctl); finish(true, d);
+        })
+        .catch((e) => {
+          lastErr = e; ctls.delete(ctl); running--;
+          if (done) return;
+          if (next < OVERPASS_URLS.length) launch(); else if (running === 0) finish(false, lastErr);
+        })
+        .finally(() => clearTimeout(tm));
+    };
+    launch();
+  });
 }
 const eleOf = (v) => v ? Math.round(parseFloat(String(v).replace(",", "."))) || null : null;
-// named summits near the highest point and along the track, with distance to the track and to the highest point
+// named summits in the area of the track (cheap bounding-box query), with distance to the track and to the highest point
 async function trackPeaks(pts, top) {
-  const step = Math.max(1, Math.ceil(pts.length / 150));
-  const line = pts.filter((_, i) => i % step === 0);
-  if (line[line.length - 1] !== pts[pts.length - 1]) line.push(pts[pts.length - 1]);
-  const sel = 'node["natural"~"^(peak|volcano)$"]["name"]';
-  const q = `[out:json][timeout:25];(${top ? `${sel}(around:1500,${top.lat.toFixed(5)},${top.lon.toFixed(5)});` : ""}${sel}(around:300,${line.map((p) => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(",")}););out body;`;
+  let s = 90, w = 180, n = -90, e = -180;
+  for (const p of pts) { if (p.lat < s) s = p.lat; if (p.lat > n) n = p.lat; if (p.lon < w) w = p.lon; if (p.lon > e) e = p.lon; }
+  const padLat = 0.014, padLon = 0.014 / Math.max(0.2, Math.cos(((s + n) / 2) * Math.PI / 180));
+  const bb = `${(s - padLat).toFixed(5)},${(w - padLon).toFixed(5)},${(n + padLat).toFixed(5)},${(e + padLon).toFixed(5)}`;
+  const q = `[out:json][timeout:20];(node["natural"="peak"]["name"](${bb});node["natural"="volcano"]["name"](${bb}););out body;`;
   const data = await overpass(q);
   const tstep = Math.max(1, Math.ceil(pts.length / 3000));
   const tp = pts.filter((_, i) => i % tstep === 0);
-  const cosLat = Math.cos((tp.reduce((a, p) => a + p.lat, 0) / tp.length) * Math.PI / 180);
+  const cosLat = Math.cos(((s + n) / 2) * Math.PI / 180);
   const seen = new Set();
   return (data.elements || []).filter((el) => { const k = el.id != null ? el.id : `${el.lat},${el.lon}`; if (!el.tags || !el.tags.name || seen.has(k)) return false; seen.add(k); return true; }).map((el) => {
     const pk = { name: el.tags.name, ele: eleOf(el.tags.ele), lat: el.lat, lon: el.lon };
@@ -1441,13 +1460,14 @@ async function trackPeaks(pts, top) {
     return pk;
   });
 }
-// fallback when no Overpass server answers: the nearest summit at the highest point via Nominatim
+// fast first guess: the nearest summit at the highest point, plus the country, in one Nominatim request
 async function peakAtTop(top) {
-  const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${top.lat.toFixed(5)}&lon=${top.lon.toFixed(5)}&zoom=17&layer=natural&extratags=1&accept-language=de`);
-  if (!d || !d.name || d.category !== "natural" || !/peak|volcano/.test(d.type || "")) return [];
+  const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${top.lat.toFixed(5)}&lon=${top.lon.toFixed(5)}&zoom=18&layer=natural&extratags=1&accept-language=de`, {}, 8000);
+  const country = (d && d.address && d.address.country) || "";
+  if (!d || !d.name || d.category !== "natural" || !/peak|volcano/.test(d.type || "")) return { peak: null, country };
   const pk = { name: d.name, ele: eleOf(d.extratags && d.extratags.ele), lat: +d.lat, lon: +d.lon, order: 0 };
   pk.distTop = hav(top, pk); pk.dist = pk.distTop;
-  return [pk];
+  return { peak: pk.distTop <= 500 ? pk : null, country };
 }
 async function countryOf(lat, lon) {
   const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=3&accept-language=de`);
@@ -1485,33 +1505,49 @@ async function addGpxFiles(files) {
   gpxItems.sort((x, y) => String(x.d).localeCompare(String(y.d)));
   renderCards(); drawPreview(); gpxStatus("");
 }
+let lastNominatim = 0;
+async function nominatimSlot() { const wait = lastNominatim + 1100 - Date.now(); lastNominatim = Math.max(Date.now(), lastNominatim + 1100); if (wait > 0) await sleep(wait); }
+function setMainPeak(it, p) {
+  it.g = p.name; if (p.ele) it.h = p.ele; it.coord = `${(+p.lat).toFixed(5)}, ${(+p.lon).toFixed(5)}`;
+  it.gx = (it.gx || []).filter((x) => String(x.g).toLowerCase() !== p.name.toLowerCase());
+}
 function queueLookup(it) {
   lookupQueue = lookupQueue.then(async () => {
     if (!gpxItems.includes(it) || !it.a.top) { it.lookup = "fertig"; return; }
-    it.lookup = "läuft";
-    const { lat, lon } = it.a.top;
-    it.lookupFailed = false;
-    try {
-      let all, viaFallback = false;
-      try { all = await trackPeaks(it.pts, it.a.top); }
-      catch (err) { all = await peakAtTop(it.a.top); viaFallback = true; }
+    it.lookup = "läuft"; it.lookupFailed = false;
+    const top = it.a.top;
+    // both requests start at once; the quick one at the highest point usually answers within a second
+    const ovP = trackPeaks(it.pts, top).then((v) => ({ ok: true, v }), (e) => ({ ok: false, e }));
+    await nominatimSlot();
+    const quick = await peakAtTop(top).catch(() => null);
+    let mainFrom = "";
+    if (quick) {
+      if (quick.country && !it.land) it.land = quick.country;
+      if (quick.peak && !it.g) { setMainPeak(it, quick.peak); mainFrom = `${quick.peak.name}${quick.peak.ele ? " (" + nf.format(quick.peak.ele) + " m)" : ""}, ${Math.round(quick.peak.distTop)} m vom höchsten Punkt`; }
+    }
+    if (mainFrom) { it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}.`; it.lookup = "teil"; if (gpxItems.includes(it)) refreshCard(it); }
+    const ov = await ovP;
+    if (ov.ok) {
+      const all = ov.v;
       const near = all.filter((p) => p.distTop <= 1500).sort((a, b) => a.distTop - b.distTop);
       it.peaks = near.slice(0, 8).map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.distTop }));
       const best = near.find((p) => p.distTop <= 500);
       const onTrack = all.filter((p) => p.dist <= 300).sort((a, b) => a.order - b.order);
       it.trackPeaks = onTrack.map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.dist }));
-      if (best && !it.g) { it.g = best.name; if (best.ele) it.h = best.ele; it.coord = `${best.lat.toFixed(5)}, ${best.lon.toFixed(5)}`; }
+      if (best && !it.g) { setMainPeak(it, best); mainFrom = `${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.distTop)} m vom höchsten Punkt`; }
       const mainName = String(it.g || "").trim().toLowerCase();
       if (!it.gxTouched) it.gx = onTrack.filter((p) => p.dist <= 120 && p.name.toLowerCase() !== mainName).map((p) => ({ g: p.name, h: p.ele || undefined, lat: p.lat, lon: p.lon }));
       const nx = (it.gx || []).length;
       const extra = nx ? ` ${nx} weitere${nx === 1 ? "r" : ""} Gipfel am Weg erkannt.` : "";
-      if (best) it.peakNote = `Gipfel aus OpenStreetMap: ${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.distTop)} m vom höchsten Punkt.${extra}`;
+      if (mainFrom) it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}.${extra}`;
       else if (near.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${near.slice(0, 3).map((p) => p.name).join(", ")}.${extra}`;
-      else if (viaFallback) { it.peakNote = "Die Gipfelsuche von OpenStreetMap ist gerade überlastet."; it.lookupFailed = true; }
       else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen." + extra;
-      if (viaFallback && best) it.peakNote += " (Gipfel am Weg konnten gerade nicht gesucht werden.)";
-    } catch (e) { it.peakNote = "Gipfelsuche gerade nicht erreichbar."; it.lookupFailed = true; }
-    try { await sleep(1100); if (!it.land) it.land = await countryOf(lat, lon); } catch (e) { /* country stays empty */ }
+    } else if (mainFrom) {
+      it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}. (Gipfel am Weg konnten gerade nicht gesucht werden.)`;
+    } else {
+      it.peakNote = "Gipfelsuche gerade nicht erreichbar."; it.lookupFailed = true;
+    }
+    if (!it.land) { try { await nominatimSlot(); it.land = await countryOf(top.lat, top.lon); } catch (e) { /* country stays empty */ } }
     it.lookup = "fertig";
     if (gpxItems.includes(it)) refreshCard(it);
   });
@@ -1551,7 +1587,8 @@ function cardHtml(it) {
   </article>`;
 }
 function noteHtml(it) {
-  if (it.lookup !== "fertig") return "Suche Gipfel und Land in OpenStreetMap …";
+  if (it.lookup === "teil") return esc(it.peakNote || "") + " Suche weitere Gipfel am Weg …";
+  if (it.lookup !== "fertig") return "Suche Gipfel in OpenStreetMap …";
   return esc(it.peakNote || "") + (it.lookupFailed ? ' <button class="linkbtn" type="button" data-relookup>Erneut suchen</button>' : "");
 }
 function renderCards() {
