@@ -211,6 +211,10 @@ table.t td.num, table.t th.num { text-align: right; }
 .pickhint button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
 .trkrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 14px; }
 .attach { display: grid; gap: 8px; }
+#detailBody .links { gap: 10px 18px; font-size: 14.5px; margin-top: 2px; }
+#detailBody .linkbtn, #detailBody .links a { padding: 3px 0; }
+#detailBody .visit { padding: 12px 0; }
+#detailBody .pp .sub { margin-bottom: 4px; }
 .pin { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent); border: 3px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 
 .leaflet-container { font: 14px/1.4 var(--f-body); }
@@ -331,6 +335,15 @@ table.t td.num, table.t th.num { text-align: right; }
           <button class="btn grow" id="newBtn" type="button">+ Tour von Hand</button>
         </div>
       </div>
+    </section>
+
+    <!-- detail (summit / tour / goal shown in the panel instead of a popup on the map) -->
+    <section class="view" id="v-detail" hidden>
+      <div class="vh pad">
+        <button class="iconbtn" data-back type="button" aria-label="Zurück zur Liste">←</button>
+        <h2 id="detailTitle"></h2>
+      </div>
+      <div class="scroll"><div class="body pad" id="detailBody"></div></div>
     </section>
 
     <!-- GPX -->
@@ -831,6 +844,7 @@ applyMapH();
 })();
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && $("app").classList.contains("mapfull")) setMapFull(false);
+  else if (e.key === "Escape" && state.view === "detail") show("browse");
   if (e.key === "Enter" && e.target && e.target.id && e.target.id.endsWith("-gxq")) { e.preventDefault(); peakSearch(e.target.id.slice(0, -4), "gx"); }
 });
 map.createPane("pts"); map.getPane("pts").style.zIndex = 450;
@@ -844,16 +858,10 @@ map.on("overlayadd overlayremove", (e) => {
   if (e.type === "overlayadd") trackLayer.eachLayer((l) => l.bringToBack()); // keep the summit points on top
 });
 let trackIndex = new Map();
+const TRACK_RED = "#E0102F";
 function highlightTracks(ids) {
   const on = new Set(ids || []);
-  trackIndex.forEach((pl, id) => pl.setStyle(on.has(id) ? { weight: 5.5, opacity: 1 } : { weight: 3, opacity: on.size ? 0.45 : 0.75 }));
-}
-map.on("popupclose", () => highlightTracks([]));
-function openTrackPopup(id, latlng) {
-  const t = tours().find((x) => x.id === id); if (!t) return;
-  const ref = [{ id, name: t.g || t.r || "", h: t.h, lat: hasPos(t) ? +t.lat : latlng.lat, lon: hasPos(t) ? +t.lon : latlng.lng }];
-  L.popup({ maxWidth: 360, autoPanPadding: [24, 24] }).setLatLng(latlng).setContent(tourPopup(ref)).openOn(map);
-  highlightTracks([id]);
+  trackIndex.forEach((pl, id) => { pl.setStyle(on.has(id) ? { weight: 5.5, opacity: 1 } : { weight: 3, opacity: on.size ? 0.5 : 0.85 }); });
 }
 function showTrack(id) {
   const t = tours().find((x) => x.id === id); const segs = trackLatLngs(t); if (!segs.length) return;
@@ -872,12 +880,16 @@ const syncLabels = () => $("map").classList.toggle("labels", map.getZoom() >= 12
 map.on("zoomend", syncLabels); syncLabels();
 
 /* ===================== views ===================== */
-const VIEWS = ["setup", "browse", "gpx", "form", "stats", "settings"];
+const VIEWS = ["setup", "browse", "detail", "gpx", "form", "stats", "settings"];
+let browseScroll = null;
 function show(v) {
   setMapFull(false);
+  if (state.view === "browse" && v !== "browse") browseScroll = { v: $("v-browse").scrollTop, l: $("list").scrollTop };
   for (const x of VIEWS) $("v-" + x).hidden = x !== v;
   state.view = v;
-  $("app").classList.toggle("tall", !["browse", "setup"].includes(v));
+  if (v === "browse" && browseScroll) { $("v-browse").scrollTop = browseScroll.v; $("list").scrollTop = browseScroll.l; }
+  if (v !== "detail") { state.detail = null; selLayer.clearLayers(); highlightTracks([]); }
+  $("app").classList.toggle("tall", !["browse", "setup", "detail"].includes(v));
   $("app").classList.toggle("setup", v === "setup");
   map.closePopup();
   if (v !== "form") { formLayer.clearLayers(); setPick(false); }
@@ -946,6 +958,7 @@ function render() {
   renderStats(T);
   renderMarkers(T, B);
   renderList(T, B);
+  if (state.view === "detail") renderDetail(false);
   $("newBtn").textContent = state.tab === "bucket" ? "+ Ziel" : "+ Tour von Hand";
 }
 function renderControls() {
@@ -988,8 +1001,8 @@ function renderMarkers(T, B) {
   for (const t of T) {
     const segs = trackLatLngs(t); if (!segs.length) continue;
     const id = t.id;
-    const pl = L.polyline(segs, { renderer: ptsR, color: colorFor(t.s), weight: 3, opacity: 0.75, lineJoin: "round", lineCap: "round" });
-    pl.on("click", (e) => { if (pickTarget) return; L.DomEvent.stopPropagation(e); openTrackPopup(id, e.latlng); });
+    const pl = L.polyline(segs, { renderer: ptsR, color: TRACK_RED, weight: 3, opacity: 0.85, lineJoin: "round", lineCap: "round" });
+    pl.on("click", (e) => { if (pickTarget) return; L.DomEvent.stopPropagation(e); openDetail({ kind: "tour", ref: refFor(id) }); });
     trackLayer.addLayer(pl); trackIndex.set(id, pl);
   }
   const stages = {};
@@ -1019,8 +1032,8 @@ function renderMarkers(T, B) {
       fillColor: colorFor(first.t.s), fillOpacity: entries.every((e) => e.t.ok === "Nein") ? 0.5 : 1
     });
     const ref = entries.map((e) => ({ id: e.id, name: e.name, h: e.h, lat: e.lat, lon: e.lon }));
-    m.bindPopup(() => tourPopup(ref), { maxWidth: 360, autoPanPadding: [24, 24] });
-    m.on("popupopen", () => highlightTracks(ref.map((r) => r.id)));
+    m._gbRef = ref;
+    m.on("click", () => { if (pickTarget) return; openDetail({ kind: "tour", ref }); });
     m.bindTooltip(esc(first.name), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
     tourLayer.addLayer(m);
     for (const e of entries) if (e.main || !markerIndex.has(e.id)) markerIndex.set(e.id, m);
@@ -1030,7 +1043,7 @@ function renderMarkers(T, B) {
     if (!hasPos(b)) continue;
     const m = L.circleMarker([+b.lat, +b.lon], { renderer: ptsR, radius: 8, color: colorFor(b.s), weight: 3, dashArray: "3 3", fillColor: "#FFFFFF", fillOpacity: 0.9 });
     const id = b.id;
-    m.bindPopup(() => bucketPopup(id), { maxWidth: 360, autoPanPadding: [24, 24] });
+    m.on("click", () => { if (pickTarget) return; openDetail({ kind: "bucket", id }); });
     m.bindTooltip(esc(b.g || b.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
     bucketLayer.addLayer(m);
     markerIndex.set(b.id, m);
@@ -1046,12 +1059,12 @@ function stageLine(v) {
   const i = dates.indexOf(v.d);
   return `<div class="mtline">↔ <button class="linkbtn" type="button" data-mtf="${esc(v.mt)}">${esc(v.mt)}</button>${i >= 0 && dates.length > 1 ? ` · Tag ${i + 1} von ${dates.length}` : ""}</div>`;
 }
-function tourPopup(ref) {
+function tourDetail(ref) {
   const visits = ref.map((r) => ({ r, t: tours().find((t) => t.id === r.id) })).filter((v) => v.t);
-  if (!visits.length) return "";
+  if (!visits.length) return null;
   const top = visits[0];
   const head = [top.r.h ? nf.format(top.r.h) + " m" : "", top.t.geb, top.t.land].filter(Boolean).join(" · ");
-  let html = `<div class="pp"><h3>${esc(top.r.name || "Ohne Namen")}</h3><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
+  let html = `<div class="pp"><div class="sub">${esc(head)}${visits.length > 1 ? ` · ${visits.length}× hier` : ""}</div>`;
   for (const { r, t: v } of visits) {
     const facts = [+v.tage > 1 && `${v.tage} Tage`, v.sch && `Grad ${v.sch}`, v.sl && `${v.sl} SL`, v.hm && `${nf.format(v.hm)} Hm`, v.km && `${nf1.format(v.km)} km`, v.dur && `${v.dur} h`].filter(Boolean).join(" · ");
     const winter = [v.lws && `Lawinenwarnstufe ${v.lws}`, v.schnee && `Schnee: ${v.schnee}`].filter(Boolean).join(" · ");
@@ -1067,20 +1080,63 @@ function tourPopup(ref) {
       <div class="links">${linkHtml(v)}${hasTrk(v) ? `<button class="linkbtn" type="button" data-show-trk="${esc(v.id)}">Track zeigen</button>` : ""}<button class="linkbtn" type="button" data-edit-t="${esc(v.id)}">Bearbeiten</button></div>
     </div>`;
   }
-  const la = (+top.r.lat).toFixed(5), lo = (+top.r.lon).toFixed(5);
-  return html + `<div class="coords"><span>${la}, ${lo}</span><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div></div>`;
+  return { title: top.r.name || "Ohne Namen", html: html + coordsHtml(top.r) + "</div>" };
 }
-function bucketPopup(id) {
-  const b = bucketItems().find((x) => x.id === id); if (!b) return "";
+function coordsHtml(o) {
+  if (!hasPos(o)) return "";
+  const la = (+o.lat).toFixed(5), lo = (+o.lon).toFixed(5);
+  return `<div class="coords"><span>${la}, ${lo}</span><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div>`;
+}
+function bucketDetail(id) {
+  const b = bucketItems().find((x) => x.id === id); if (!b) return null;
   const head = [b.h ? nf.format(b.h) + " m" : "", b.geb, b.land].filter(Boolean).join(" · ");
   const facts = [b.sch && `Grad ${b.sch}`, b.sl && `${b.sl} SL`, b.hm && `${nf.format(b.hm)} Hm`, b.zeit && `Beste Zeit: ${b.zeit}`].filter(Boolean).join(" · ");
-  const la = (+b.lat).toFixed(5), lo = (+b.lon).toFixed(5);
-  return `<div class="pp"><h3>${esc(b.g || b.r || "Ziel")}</h3><div class="sub">${esc(head)}</div>
+  return { title: b.g || b.r || "Ziel", html: `<div class="pp"><div class="sub">${esc(head)}</div>
     <div class="visit"><div class="vhead"><span class="pill goal">Bucketlist${b.prio ? " · " + esc(b.prio) : ""}</span><span class="tag" style="--c:${colorFor(b.s)}">${esc(b.s || "–")}</span></div>
     ${b.r ? `<div class="vroute">${esc(b.r)}</div>` : ""}${facts ? `<div class="vfacts">${esc(facts)}</div>` : ""}
     ${b.txt ? `<div class="vtxt">${esc(b.txt)}</div>` : ""}
     <div class="links">${linkHtml(b)}<button class="linkbtn" type="button" data-edit-b="${esc(b.id)}">Bearbeiten</button><button class="linkbtn" type="button" data-done-b="${esc(b.id)}">Geschafft – als Tour eintragen</button></div></div>
-    <div class="coords"><span>${la}, ${lo}</span><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google Maps ↗</a></div></div>`;
+    ${coordsHtml(b)}</div>` };
+}
+// the visits shown for a tour: its own entry first, then other tours at the same point
+function refFor(id) {
+  const t = tours().find((x) => x.id === id); if (!t) return [];
+  const m = markerIndex.get(id), group = m && m._gbRef;
+  if (group && group.some((r) => r.id === id)) return [group.find((r) => r.id === id), ...group.filter((r) => r.id !== id)];
+  return [{ id, name: t.g || t.r || "", h: t.h, lat: hasPos(t) ? +t.lat : null, lon: hasPos(t) ? +t.lon : null }];
+}
+const selLayer = L.layerGroup().addTo(map);
+function openDetail(d) {
+  if (state.view === "form" || state.view === "gpx") { toast("Erst speichern oder zurückgehen, dann zeigt ein Tipp auf die Karte die Details."); return; }
+  state.detail = d;
+  if (state.view !== "detail") show("detail");
+  renderDetail(true);
+}
+function renderDetail(toTop) {
+  const d = state.detail; if (!d) return;
+  const r = d.kind === "tour" ? tourDetail(d.ref) : bucketDetail(d.id);
+  if (!r) { show("browse"); return; }
+  $("detailTitle").textContent = r.title;
+  $("detailBody").innerHTML = r.html;
+  if (toTop) $("detailBody").parentElement.scrollTop = 0;
+  highlightTracks(d.kind === "tour" ? d.ref.map((x) => x.id) : []);
+  selLayer.clearLayers();
+  const p = d.kind === "tour" ? d.ref[0] : bucketItems().find((x) => x.id === d.id);
+  if (p && hasPos(p)) {
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#C8102E";
+    selLayer.addLayer(L.circleMarker([+p.lat, +p.lon], { renderer: ptsR, radius: 15, color: accent, weight: 3, fill: false, interactive: false }));
+  }
+}
+function focusTour(id) {
+  const m = markerIndex.get(id), pl = map.hasLayer(trackLayer) ? trackIndex.get(id) : null;
+  openDetail({ kind: "tour", ref: refFor(id) });
+  if (pl) map.flyToBounds(pl.getBounds(), { padding: [30, 30], maxZoom: 15, duration: 0.6 });
+  else if (m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 });
+}
+function focusBucket(id) {
+  const m = markerIndex.get(id);
+  openDetail({ kind: "bucket", id });
+  if (m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 });
 }
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-mtf]");
@@ -1154,21 +1210,9 @@ $("tabTours").addEventListener("click", () => setTab("tours"));
 $("tabBucket").addEventListener("click", () => setTab("bucket"));
 $("list").addEventListener("click", (e) => {
   const it = e.target.closest(".item"); if (!it) return;
-  const id = it.dataset.id, m = markerIndex.get(id);
-  const pl = it.dataset.kind === "tour" && map.hasLayer(trackLayer) ? trackIndex.get(id) : null;
-  if (!m && !pl) { openForm(it.dataset.kind, id); return; }
   document.querySelectorAll(".item.active").forEach((x) => x.classList.remove("active"));
   it.classList.add("active");
-  if (pl) {
-    map.flyToBounds(pl.getBounds(), { padding: [30, 30], maxZoom: 15, duration: 0.6 });
-    map.once("moveend", () => {
-      if (m) m.openPopup(); else { let c; try { c = pl.getCenter(); } catch (err) { c = pl.getBounds().getCenter(); } openTrackPopup(id, c); }
-      highlightTracks([id]);
-    });
-    return;
-  }
-  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 });
-  map.once("moveend", () => m.openPopup());
+  if (it.dataset.kind === "bucket") focusBucket(it.dataset.id); else focusTour(it.dataset.id);
 });
 $("statsBtn").addEventListener("click", () => show("stats"));
 $("settingsBtn").addEventListener("click", () => show("settings"));
@@ -1484,8 +1528,7 @@ $("formSave").addEventListener("click", async () => {
     toast("Gespeichert.");
     show("browse");
     if (kind === "bucket" && state.tab !== "bucket") setTab("bucket");
-    const m = markerIndex.get(o.id);
-    if (m) { map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.6 }); map.once("moveend", () => m.openPopup()); }
+    if (kind === "bucket") focusBucket(o.id); else focusTour(o.id);
   } catch (e) {
     st.textContent = e.message + " Deine Eingaben bleiben erhalten."; st.classList.add("err"); $("formSave").disabled = false;
   }
