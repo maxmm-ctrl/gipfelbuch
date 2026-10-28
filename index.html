@@ -1406,29 +1406,31 @@ async function fetchJson(url, opts, ms = 20000) {
   try { const r = await fetch(url, { ...opts, signal: ctl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
   finally { clearTimeout(tm); }
 }
-// Ask Overpass servers with a head start: if the first one has not answered after 3 s (or fails),
+const errText = (e) => !e ? "Fehler" : e.name === "AbortError" ? "keine Antwort (Zeitüberschreitung)" : /^HTTP \d+/.test(e.message || "") ? e.message : "nicht erreichbar (" + (e.message || e.name) + ")";
+// Ask Overpass servers with a head start: if the first one has not answered after 2.5 s (or fails),
 // the next one is asked as well; the first good answer wins and the others are cancelled.
-function overpass(q) {
+function overpass(q, log) {
   return new Promise((resolve, reject) => {
     let next = 0, running = 0, done = false, lastErr = null, hedgeT = null;
     const ctls = new Set();
     const finish = (ok, val) => { if (done) return; done = true; clearTimeout(hedgeT); ctls.forEach((c) => c.abort()); ok ? resolve(val) : reject(val); };
     const launch = () => {
       if (done || next >= OVERPASS_URLS.length) return;
-      const url = OVERPASS_URLS[next++]; running++;
+      const url = OVERPASS_URLS[next++], host = url.split("/")[2]; running++;
       const ctl = new AbortController(); ctls.add(ctl);
-      const tm = setTimeout(() => ctl.abort(), 20000);
-      clearTimeout(hedgeT); hedgeT = setTimeout(launch, 3000);
+      const tm = setTimeout(() => ctl.abort(), 12000);
+      clearTimeout(hedgeT); hedgeT = setTimeout(launch, 2500);
       fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ctl.signal })
         .then(async (r) => {
           if (!r.ok) throw new Error("HTTP " + r.status);
           const d = await r.json();
-          if (d && d.remark && /error|timed out|runtime/i.test(d.remark) && !(d.elements || []).length) throw new Error(d.remark);
-          ctls.delete(ctl); finish(true, d);
+          if (d && d.remark && /error|timed out|runtime/i.test(d.remark) && !(d.elements || []).length) throw new Error("Server meldet: " + d.remark.slice(0, 60));
+          ctls.delete(ctl); if (log) log("Overpass " + host, "ok"); finish(true, d);
         })
         .catch((e) => {
           lastErr = e; ctls.delete(ctl); running--;
           if (done) return;
+          if (log) log("Overpass " + host, errText(e));
           if (next < OVERPASS_URLS.length) launch(); else if (running === 0) finish(false, lastErr);
         })
         .finally(() => clearTimeout(tm));
@@ -1438,13 +1440,13 @@ function overpass(q) {
 }
 const eleOf = (v) => v ? Math.round(parseFloat(String(v).replace(",", "."))) || null : null;
 // named summits in the area of the track (cheap bounding-box query), with distance to the track and to the highest point
-async function trackPeaks(pts, top) {
+async function trackPeaks(pts, top, log) {
   let s = 90, w = 180, n = -90, e = -180;
   for (const p of pts) { if (p.lat < s) s = p.lat; if (p.lat > n) n = p.lat; if (p.lon < w) w = p.lon; if (p.lon > e) e = p.lon; }
   const padLat = 0.014, padLon = 0.014 / Math.max(0.2, Math.cos(((s + n) / 2) * Math.PI / 180));
   const bb = `${(s - padLat).toFixed(5)},${(w - padLon).toFixed(5)},${(n + padLat).toFixed(5)},${(e + padLon).toFixed(5)}`;
-  const q = `[out:json][timeout:20];(node["natural"="peak"]["name"](${bb});node["natural"="volcano"]["name"](${bb}););out body;`;
-  const data = await overpass(q);
+  const q = `[out:json][timeout:15];(node["natural"="peak"]["name"](${bb});node["natural"="volcano"]["name"](${bb}););out body;`;
+  const data = await overpass(q, log);
   const tstep = Math.max(1, Math.ceil(pts.length / 3000));
   const tp = pts.filter((_, i) => i % tstep === 0);
   const cosLat = Math.cos(((s + n) / 2) * Math.PI / 180);
@@ -1460,14 +1462,38 @@ async function trackPeaks(pts, top) {
     return pk;
   });
 }
-// fast first guess: the nearest summit at the highest point, plus the country, in one Nominatim request
+// Photon (komoot): nearest summits around a point, independent of Overpass and Nominatim
+async function photonPeaks(lat, lon, radiusKm, limit) {
+  const d = await fetchJson(`https://photon.komoot.io/reverse?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&radius=${radiusKm}&limit=${limit}&osm_tag=natural:peak&lang=de`, {}, 8000);
+  return ((d && d.features) || []).filter((f) => f && f.properties && f.properties.name && f.geometry && f.geometry.coordinates)
+    .map((f) => ({ name: f.properties.name, ele: eleOf(f.properties.ele || (f.properties.extra && f.properties.extra.ele)), lat: +f.geometry.coordinates[1], lon: +f.geometry.coordinates[0], country: f.properties.country || "" }));
+}
+// Nominatim: the nearest natural feature at the highest point, plus the country
 async function peakAtTop(top) {
-  const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${top.lat.toFixed(5)}&lon=${top.lon.toFixed(5)}&zoom=18&layer=natural&extratags=1&accept-language=de`, {}, 8000);
+  const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${top.lat.toFixed(5)}&lon=${top.lon.toFixed(5)}&zoom=17&layer=natural&extratags=1&accept-language=de`, {}, 8000);
   const country = (d && d.address && d.address.country) || "";
-  if (!d || !d.name || d.category !== "natural" || !/peak|volcano/.test(d.type || "")) return { peak: null, country };
+  if (!d || !d.name || d.category !== "natural" || !/peak|volcano/.test(d.type || "")) return { peak: null, country, what: d && d.name ? `${d.name} (${d.type})` : "nichts" };
   const pk = { name: d.name, ele: eleOf(d.extratags && d.extratags.ele), lat: +d.lat, lon: +d.lon, order: 0 };
   pk.distTop = hav(top, pk); pk.dist = pk.distTop;
-  return { peak: pk.distTop <= 500 ? pk : null, country };
+  return { peak: pk.distTop <= 500 ? pk : null, country, what: pk.name };
+}
+// clear high points of the track (summit candidates): higher than everything within 400 m and at least 30 m above the dips on both sides
+function trackSummits(pts, maxN = 6) {
+  const P = pts.filter((p) => p.ele != null);
+  if (P.length < 10) return [];
+  const cd = [0]; for (let i = 1; i < P.length; i++) cd.push(cd[i - 1] + hav(P[i - 1], P[i]));
+  const res = [];
+  for (let i = 0; i < P.length; i++) {
+    const e = P[i].ele; let ok = true;
+    for (let j = i - 1; ok && j >= 0 && cd[i] - cd[j] <= 400; j--) if (P[j].ele > e) ok = false;
+    for (let j = i + 1; ok && j < P.length && cd[j] - cd[i] <= 400; j++) if (P[j].ele > e) ok = false;
+    if (!ok) continue;
+    const drop = (dir) => { let min = e; for (let j = i + dir; j >= 0 && j < P.length; j += dir) { if (P[j].ele > e) break; if (P[j].ele < min) min = P[j].ele; } return e - min; };
+    if (drop(-1) < 30 || drop(1) < 30) continue;
+    if (res.some((r) => hav(r, P[i]) < 300)) continue;
+    res.push(P[i]);
+  }
+  return res.sort((a, b) => b.ele - a.ele).slice(0, maxN);
 }
 async function countryOf(lat, lon) {
   const d = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=3&accept-language=de`);
@@ -1494,7 +1520,7 @@ async function addGpxFiles(files) {
         id: "g" + (++gpxSeq), file: f.name, take: true, pts, a, peaks: [], lookup: "wartet",
         d: a.d, s: guessSport(type, name, f.name), g: "", r: "", geb: "", land: "", h: a.top && a.top.ele != null ? a.top.ele : "",
         hm: a.hm ?? "", km: a.km || "", dur: a.dur, sch: "", sl: "", p: "", v: "", b: "", ok: "Ja", txt: "", lr: "", lt: "", lf: "", mt: "", tage: "",
-        lws: "", schnee: "", huette: "", gx: [], trackPeaks: [],
+        lws: "", schnee: "", huette: "", gx: [], trackPeaks: [], hAuto: true,
         coord: a.top ? `${a.top.lat.toFixed(5)}, ${a.top.lon.toFixed(5)}` : ""
       };
       it.dup = dupsOf(a.d); if (it.dup.length) it.take = false;
@@ -1508,49 +1534,84 @@ async function addGpxFiles(files) {
 let lastNominatim = 0;
 async function nominatimSlot() { const wait = lastNominatim + 1100 - Date.now(); lastNominatim = Math.max(Date.now(), lastNominatim + 1100); if (wait > 0) await sleep(wait); }
 function setMainPeak(it, p) {
-  it.g = p.name; if (p.ele) it.h = p.ele; it.coord = `${(+p.lat).toFixed(5)}, ${(+p.lon).toFixed(5)}`;
+  it.g = p.name; if (p.ele && it.hAuto !== false) it.h = p.ele; it.coord = `${(+p.lat).toFixed(5)}, ${(+p.lon).toFixed(5)}`;
   it.gx = (it.gx || []).filter((x) => String(x.g).toLowerCase() !== p.name.toLowerCase());
 }
 function queueLookup(it) {
-  lookupQueue = lookupQueue.then(async () => {
-    if (!gpxItems.includes(it) || !it.a.top) { it.lookup = "fertig"; return; }
-    it.lookup = "läuft"; it.lookupFailed = false;
-    const top = it.a.top;
-    // both requests start at once; the quick one at the highest point usually answers within a second
-    const ovP = trackPeaks(it.pts, top).then((v) => ({ ok: true, v }), (e) => ({ ok: false, e }));
-    await nominatimSlot();
-    const quick = await peakAtTop(top).catch(() => null);
-    let mainFrom = "";
-    if (quick) {
-      if (quick.country && !it.land) it.land = quick.country;
-      if (quick.peak && !it.g) { setMainPeak(it, quick.peak); mainFrom = `${quick.peak.name}${quick.peak.ele ? " (" + nf.format(quick.peak.ele) + " m)" : ""}, ${Math.round(quick.peak.distTop)} m vom höchsten Punkt`; }
-    }
-    if (mainFrom) { it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}.`; it.lookup = "teil"; if (gpxItems.includes(it)) refreshCard(it); }
-    const ov = await ovP;
-    if (ov.ok) {
-      const all = ov.v;
-      const near = all.filter((p) => p.distTop <= 1500).sort((a, b) => a.distTop - b.distTop);
-      it.peaks = near.slice(0, 8).map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.distTop }));
-      const best = near.find((p) => p.distTop <= 500);
-      const onTrack = all.filter((p) => p.dist <= 300).sort((a, b) => a.order - b.order);
-      it.trackPeaks = onTrack.map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.dist }));
-      if (best && !it.g) { setMainPeak(it, best); mainFrom = `${best.name}${best.ele ? " (" + nf.format(best.ele) + " m)" : ""}, ${Math.round(best.distTop)} m vom höchsten Punkt`; }
-      const mainName = String(it.g || "").trim().toLowerCase();
-      if (!it.gxTouched) it.gx = onTrack.filter((p) => p.dist <= 120 && p.name.toLowerCase() !== mainName).map((p) => ({ g: p.name, h: p.ele || undefined, lat: p.lat, lon: p.lon }));
-      const nx = (it.gx || []).length;
-      const extra = nx ? ` ${nx} weitere${nx === 1 ? "r" : ""} Gipfel am Weg erkannt.` : "";
-      if (mainFrom) it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}.${extra}`;
-      else if (near.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${near.slice(0, 3).map((p) => p.name).join(", ")}.${extra}`;
-      else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen." + extra;
-    } else if (mainFrom) {
-      it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}. (Gipfel am Weg konnten gerade nicht gesucht werden.)`;
-    } else {
-      it.peakNote = "Gipfelsuche gerade nicht erreichbar."; it.lookupFailed = true;
-    }
-    if (!it.land) { try { await nominatimSlot(); it.land = await countryOf(top.lat, top.lon); } catch (e) { /* country stays empty */ } }
-    it.lookup = "fertig";
-    if (gpxItems.includes(it)) refreshCard(it);
+  lookupQueue = lookupQueue.then(() => lookupOne(it)).catch((e) => {
+    it.lookup = "fertig"; it.lookupFailed = true; it.peakNote = "Gipfelsuche abgebrochen.";
+    (it.diag = it.diag || []).push("Fehler: " + (e && e.message)); if (gpxItems.includes(it)) refreshCard(it);
   });
+}
+async function lookupOne(it) {
+  if (!gpxItems.includes(it) || !it.a.top) { it.lookup = "fertig"; return; }
+  it.lookup = "läuft"; it.lookupFailed = false; it.diag = []; it.diagErr = false;
+  const top = it.a.top, T0 = Date.now();
+  const log = (src, res) => { it.diag.push(`${src}: ${res} · ${((Date.now() - T0) / 1000).toFixed(1)} s`); if (!/^(ok$|Gipfel |kein Gipfel|\d+ )/.test(res)) it.diagErr = true; };
+  const withDist = (p) => ({ ...p, distTop: hav(top, p), dist: hav(top, p) });
+  let mainFrom = "";
+  const offerMain = (p) => {
+    if (!p || it.g || !(p.distTop <= 500)) return;
+    setMainPeak(it, p);
+    mainFrom = `${p.name}${p.ele ? " (" + nf.format(p.ele) + " m)" : ""}, ${Math.round(p.distTop)} m vom höchsten Punkt`;
+    it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}.`; it.lookup = "teil";
+    if (gpxItems.includes(it)) refreshCard(it);
+  };
+  // three independent sources start at once; whichever finds the summit first fills the field
+  const ovP = trackPeaks(it.pts, top, log).then((v) => ({ ok: true, v }), (e) => ({ ok: false, e }));
+  const phP = photonPeaks(top.lat, top.lon, 1.5, 8).then((list) => {
+    const l = list.map(withDist).sort((a, b) => a.distTop - b.distTop);
+    log("Photon", l.length ? `${l.length} Gipfel in der Nähe` : "kein Gipfel in der Nähe");
+    if (!it.land && l[0] && l[0].country) it.land = l[0].country;
+    if (!it.peaks.length && l.length) it.peaks = l.map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.distTop }));
+    offerMain(l[0]);
+    return l;
+  }, (e) => { log("Photon", errText(e)); return null; });
+  const noP = (async () => {
+    await nominatimSlot();
+    try { const q = await peakAtTop(top); log("Nominatim", q.peak ? `Gipfel ${q.peak.name}` : `kein Gipfel (${q.what})`); if (q.country && !it.land) it.land = q.country; offerMain(q.peak); return q; }
+    catch (e) { log("Nominatim", errText(e)); return null; }
+  })();
+  await Promise.all([phP, noP]);
+  if (mainFrom && it.lookup === "teil" && gpxItems.includes(it)) refreshCard(it);
+  const ov = await ovP;
+  if (ov.ok) {
+    const all = ov.v;
+    const near = all.filter((p) => p.distTop <= 1500).sort((a, b) => a.distTop - b.distTop);
+    if (near.length) it.peaks = near.slice(0, 8).map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.distTop }));
+    const best = near.find((p) => p.distTop <= 500);
+    offerMain(best);
+    // the summit came from a source without height: take the height from Overpass
+    const same = it.g && all.find((p) => p.name.toLowerCase() === String(it.g).toLowerCase() && p.ele);
+    if (same && it.hAuto !== false) { it.h = same.ele; if (mainFrom && !/ m\),/.test(mainFrom)) mainFrom = mainFrom.replace(/^([^,]+),/, `$1 (${nf.format(same.ele)} m),`); }
+    const onTrack = all.filter((p) => p.dist <= 300).sort((a, b) => a.order - b.order);
+    it.trackPeaks = onTrack.map((p) => ({ name: p.name, ele: p.ele, lat: p.lat, lon: p.lon, dist: p.dist }));
+    const mainName = String(it.g || "").trim().toLowerCase();
+    if (!it.gxTouched) it.gx = onTrack.filter((p) => p.dist <= 120 && p.name.toLowerCase() !== mainName).map((p) => ({ g: p.name, h: p.ele || undefined, lat: p.lat, lon: p.lon }));
+  } else if (!it.gxTouched) {
+    // Overpass unreachable: look for summits at the clear high points of the track via Photon
+    const cands = trackSummits(it.pts).filter((p) => hav(p, top) > 300);
+    const found = [];
+    for (const c of cands) {
+      try {
+        const l = (await photonPeaks(c.lat, c.lon, 0.3, 1)).map((p) => ({ ...p, d: hav(c, p) })).filter((p) => p.d <= 300);
+        if (l[0] && !found.some((f) => f.g === l[0].name)) found.push({ g: l[0].name, h: l[0].ele || undefined, lat: l[0].lat, lon: l[0].lon });
+      } catch (e) { log("Photon (Weg)", errText(e)); break; }
+    }
+    const mainName = String(it.g || "").trim().toLowerCase();
+    it.gx = found.filter((p) => p.g.toLowerCase() !== mainName);
+    it.trackPeaks = it.gx.map((p) => ({ name: p.g, ele: p.h, lat: p.lat, lon: p.lon, dist: 0 }));
+    if (cands.length) log("Photon (Weg)", `${cands.length} Hochpunkte geprüft, ${it.gx.length} Gipfel`);
+  }
+  const nx = (it.gx || []).length;
+  const extra = nx ? ` ${nx} weitere${nx === 1 ? "r" : ""} Gipfel am Weg erkannt.` : "";
+  if (mainFrom) it.peakNote = `Gipfel aus OpenStreetMap: ${mainFrom}.${extra}`;
+  else if (it.peaks.length) it.peakNote = `Kein Gipfel direkt am höchsten Punkt. In der Nähe: ${it.peaks.slice(0, 3).map((p) => p.name).join(", ")}.${extra}`;
+  else if (it.diagErr && !ov.ok) { it.peakNote = "Gipfelsuche gerade nicht erreichbar."; it.lookupFailed = true; }
+  else it.peakNote = "Kein benannter Gipfel in der Nähe gefunden – bitte selbst eintragen." + extra;
+  if (!it.land) { try { await nominatimSlot(); it.land = await countryOf(top.lat, top.lon); } catch (e) { /* country stays empty */ } }
+  it.lookup = "fertig";
+  if (gpxItems.includes(it)) refreshCard(it);
 }
 const G_MAIN = [["s", "Sportart", "sport"], ["g", "Gipfel / Ziel", "peak", "full"], ["gx", "Weitere Gipfel", "gx", "full"], ["h", "Gipfelhöhe (m)", "int"], ["land", "Land", "text"],
   ["r", "Route", "text", "full"], ["geb", "Gebirgsgruppe", "text"], ["mt", "Mehrtagestour (Name)", "mt"],
@@ -1582,6 +1643,7 @@ function cardHtml(it) {
     <div class="facts">${facts || '<span class="note">Keine Zeit- oder Höhendaten im Track.</span>'}</div>
     ${(it.dup || []).length ? `<div class="note warn">Am ${fmtDate(it.d)} steht schon im Gipfelbuch: ${esc(it.dup.join(", "))}. Deshalb nicht angehakt.</div>` : ""}
     <div class="note${it.lookupFailed ? " warn" : ""}" data-note>${noteHtml(it)}</div>
+    <div class="note" data-diagbox hidden></div>
     <div class="fields">${G_MAIN.map((f) => gpxFieldHtml(it, f)).join("")}</div>
     <details><summary>Weitere Felder: Datum, Dauer, Partner, Bewertung, Links …</summary><div class="fields">${G_MORE.map((f) => gpxFieldHtml(it, f)).join("")}</div></details>
   </article>`;
@@ -1589,7 +1651,8 @@ function cardHtml(it) {
 function noteHtml(it) {
   if (it.lookup === "teil") return esc(it.peakNote || "") + " Suche weitere Gipfel am Weg …";
   if (it.lookup !== "fertig") return "Suche Gipfel in OpenStreetMap …";
-  return esc(it.peakNote || "") + (it.lookupFailed ? ' <button class="linkbtn" type="button" data-relookup>Erneut suchen</button>' : "");
+  return esc(it.peakNote || "") + (it.lookupFailed ? ' <button class="linkbtn" type="button" data-relookup>Erneut suchen</button>' : "")
+    + ((it.diag || []).length && (it.lookupFailed || it.diagErr) ? ' <button class="linkbtn" type="button" data-diag>Details</button>' : "");
 }
 function renderCards() {
   $("cards").innerHTML = gpxItems.map(cardHtml).join("");
@@ -1613,6 +1676,7 @@ const itemOf = (el) => { const card = el.closest(".card"); return card ? gpxItem
 $("cards").addEventListener("input", (e) => {
   const it = itemOf(e.target), k = e.target.dataset.k; if (!it || !k) return;
   it[k] = e.target.value;
+  if (k === "h") it.hAuto = false;
   if (k === "coord" || k === "s") drawPreview(true);
   if (k === "g") renderGx("g-" + it.id);
   saveGpx();
@@ -1632,6 +1696,12 @@ $("cards").addEventListener("change", (e) => {
   saveGpx();
 });
 $("cards").addEventListener("click", (e) => {
+  const dg = e.target.closest("[data-diag]");
+  if (dg) {
+    const it = itemOf(dg); const box = dg.closest(".card").querySelector("[data-diagbox]");
+    if (it && box) { box.hidden = !box.hidden; box.innerHTML = (it.diag || []).map(esc).join("<br>"); }
+    return;
+  }
   const rl = e.target.closest("[data-relookup]");
   if (rl) {
     const it = itemOf(rl); if (!it) return;
