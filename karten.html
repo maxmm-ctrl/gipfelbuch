@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kartenvergleich</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#24364A">
+<script>try { var t = localStorage.getItem("gb-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* Layout: a slim header, then one or two synchronised maps side by side (stacked on the phone), each with its own map choice, overlays and a short fact strip. Same palette and type as the Gipfelbuch. */
+:root {
+  --bg: #F7F8F6; --surface: #FFFFFF; --fg: #1C242C; --muted: #5E6B78; --line: #DCE1E5; --chip: #EDF0F2;
+  --accent: #C8102E; --accent-fg: #FFFFFF; --ok: #2E7D4F; --warn: #9A5B00;
+  --f-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-body: "Source Sans 3", -apple-system, system-ui, "Segoe UI", sans-serif;
+  --shadow: 0 1px 2px rgba(20,30,40,.08), 0 6px 20px rgba(20,30,40,.12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
+    --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12171C; --surface: #1A2128; --fg: #E5E9ED; --muted: #94A1AE; --line: #2A333C; --chip: #232B33;
+  --accent: #EE4B5E; --accent-fg: #FFFFFF; --ok: #5CC28A; --warn: #E0A548;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--f-body); overflow: hidden; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); }
+button, input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); border-bottom: 1px solid var(--line); background: var(--bg); }
+.top h1 { font: 700 21px/1.1 var(--f-display); margin: 0; letter-spacing: .005em; }
+.top .back { font-weight: 600; text-decoration: none; font-size: 14px; }
+.top .grow { flex: 1 1 auto; }
+select, .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 10px; font-size: 14px; min-height: 34px; }
+select { max-width: 100%; min-width: 0; }
+.btn { font-weight: 600; cursor: pointer; }
+.btn[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+label.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }
+input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+
+.panes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
+.panes.single { grid-template-columns: 1fr; }
+.panes.single #paneB { display: none; }
+.pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--line); }
+.pane:first-child { border-left: 0; }
+.bar { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--surface); position: relative; z-index: 1001; }
+.bar select { flex: 1 1 auto; }
+.bar:has(.ovl[open]) { z-index: 1200; }
+.ovl { position: relative; flex: none; }
+.ovl > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 600; background: var(--surface); min-height: 34px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ovl > summary::-webkit-details-marker { display: none; }
+.ovl[open] > summary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.ovl .n { font-variant-numeric: tabular-nums; }
+.ovlist { position: absolute; right: 0; top: calc(100% + 6px); width: min(340px, calc(100vw - 32px)); max-height: min(60vh, 460px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 8px 12px 12px; display: grid; gap: 4px; }
+.ovlist h3 { font: 600 11.5px/1.2 var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 10px 0 2px; }
+.ovlist h3:first-child { margin-top: 2px; }
+.ovrow { display: grid; grid-template-columns: 16px 1fr; gap: 2px 8px; align-items: start; padding: 4px 0; cursor: pointer; font-size: 14px; }
+.ovrow input { margin-top: 3px; }
+.ovrow small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.ovrow .st { font-size: 12px; margin-left: 4px; }
+
+.mapbox { position: relative; flex: 1; min-height: 0; }
+.map { position: absolute; inset: 0; background: #E9ECE6; }
+.keyneed { position: absolute; inset: 0; z-index: 900; display: grid; place-content: center; padding: 24px; text-align: center; background: color-mix(in srgb, var(--bg) 88%, transparent); gap: 10px; }
+.keyneed b { font: 700 18px/1.2 var(--f-display); }
+.keyneed p { margin: 0; max-width: 40ch; color: var(--muted); }
+.keyneed .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+.info { padding: 8px 10px 10px; border-top: 1px solid var(--line); background: var(--surface); font-size: 13.5px; display: grid; gap: 4px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.info .tags { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.tag { border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 600; background: var(--chip); color: var(--fg); white-space: nowrap; }
+.tag.free { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); }
+.tag.key { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); color: var(--warn); }
+.tag.now { background: var(--fg); color: var(--bg); }
+.st.ok { color: var(--ok); } .st.bad { color: var(--accent); } .st.wait, .st.out { color: var(--muted); }
+.info p { margin: 0; color: var(--muted); }
+.info .name { font-weight: 700; }
+
+.sheet { position: fixed; inset: 0; z-index: 3000; background: rgba(10,14,18,.45); display: grid; place-items: center; padding: 16px; }
+.sheet .card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); width: min(560px, 100%); max-height: calc(100% - 32px); overflow-y: auto; padding: 18px 20px 20px; display: grid; gap: 12px; }
+.sheet h2 { font: 700 21px/1.15 var(--f-display); margin: 0; }
+.sheet p { margin: 0; color: var(--muted); font-size: 14px; }
+.keyrow { display: grid; gap: 4px; }
+.keyrow label { font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.keyrow label a { font-weight: 600; font-size: 13px; }
+.keyrow input { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 14px; width: 100%; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.keyrow small { color: var(--muted); font-size: 12.5px; }
+
+.leaflet-container { font: 13px/1.4 var(--f-body); }
+.leaflet-control-attribution { font-size: 10px; max-width: 90%; }
+.slopelegend { background: var(--surface); color: var(--fg); padding: 6px 8px; border-radius: 8px; box-shadow: var(--shadow); font-size: 12px; display: grid; gap: 2px; }
+.slopelegend i { display: inline-block; width: 12px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+
+@media (max-width: 760px) {
+  .panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .panes.single { grid-template-rows: 1fr; }
+  .pane { border-left: 0; border-top: 1px solid var(--line); }
+  .pane:first-child { border-top: 0; }
+  .top h1 { font-size: 19px; }
+  .info p { display: none; }
+  .info.more p { display: block; }
+  .info { padding-bottom: 8px; }
+  #paneB .info, .panes.single #paneA .info { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="back" href="./">← Gipfelbuch</a>
+  <h1>Kartenvergleich</h1>
+  <span class="grow"></span>
+  <select id="goto" aria-label="Ort oder Tour anspringen"></select>
+  <label class="chk"><input id="showTours" type="checkbox" checked> Meine Touren</label>
+  <button class="btn" id="splitBtn" type="button" aria-pressed="true">Zwei Karten</button>
+  <button class="btn" id="keysBtn" type="button">Schlüssel</button>
+</header>
+<main class="panes" id="panes">
+  <section class="pane" id="paneA" aria-label="Karte links"></section>
+  <section class="pane" id="paneB" aria-label="Karte rechts"></section>
+</main>
+
+<div class="sheet" id="keySheet" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="keyTitle">
+    <h2 id="keyTitle">Schlüssel für weitere Karten</h2>
+    <p>Diese Anbieter sind für private, nicht-kommerzielle Nutzung kostenlos, verlangen aber eine Anmeldung und einen persönlichen Schlüssel. Die Schlüssel bleiben nur in diesem Browser.</p>
+    <div id="keyRows" style="display:grid;gap:12px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="keyClose" type="button">Fertig</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script>
+(function () {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+
+/* ---------- providers that need a free personal key ---------- */
+const PROVIDERS = {
+  mapy: { name: "Mapy.com", signup: "https://developer.mapy.com/", hint: "Kostenlos 250 000 Kacheln pro Monat." },
+  maptiler: { name: "MapTiler", signup: "https://cloud.maptiler.com/account/keys/", hint: "Kostenloser Plan für private Nutzung, 100 000 Anfragen pro Monat." },
+  thunderforest: { name: "Thunderforest", signup: "https://manage.thunderforest.com/", hint: "Hobby-Plan kostenlos, 150 000 Kacheln pro Monat." },
+  tracestrack: { name: "Tracestrack", signup: "https://console.tracestrack.com/", hint: "Kostenloser Schlüssel über die Console." },
+  stadia: { name: "Stadia Maps", signup: "https://client.stadiamaps.com/signup/", hint: "Kostenlos für nicht-kommerzielle Nutzung. Statt Schlüssel geht auch die Freigabe der Domain maxmm-ctrl.github.io im Stadia-Konto." }
+};
+let keys = {}; try { keys = JSON.parse(lsGet("kv-keys") || "{}") || {}; } catch (e) { keys = {}; }
+
+/* ---------- catalogue ---------- */
+const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+const AT = [[46.3, 9.4], [49.1, 17.2]], CH = [[45.75, 5.85], [47.85, 10.55]], NO = [[57.8, 4.0], [71.4, 31.5]], JP = [[24, 122], [46, 154]];
+const bm = (layer, ext, style = "normal") => `https://{s}.wien.gv.at/basemap/${layer}/${style}/google3857/{z}/{y}/{x}.${ext}`;
+const ch = (layer, ext) => `https://wmts.geo.admin.ch/1.0.0/${layer}/default/current/3857/{z}/{x}/{y}.${ext}`;
+const BM = { subdomains: ["maps", "maps1", "maps2", "maps3", "maps4"], attribution: 'Karte: <a href="https://basemap.at" target="_blank" rel="noopener">basemap.at</a> (CC BY 4.0)' };
+const SWISS = { attribution: '© <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo</a>' };
+
+// g: group · n: name · u: tile URL · o: Leaflet options · key: provider · cov: coverage · cost · note · now: already in the Gipfelbuch
+const BASES = [
+  { id: "otm-r", g: "Topo weltweit", n: "OpenTopoMap", now: true, u: "https://tile.openmaps.fr/opentopomap/{z}/{x}/{y}.png", o: { maxNativeZoom: 16, attribution: `Karte: OpenTopoMap-R (CC-BY-SA) · ${OSM}, SRTM` },
+    cov: "weltweit", cost: "frei", note: "Klassische topografische Darstellung mit Höhenlinien und Schummerung aus OpenStreetMap. Gute Wege, eher wenig Gelände-Detail im Fels." },
+  { id: "esri-topo", g: "Topo weltweit", n: "Esri World Topo", u: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 18, attribution: "Karte: © Esri, HERE, Garmin, USGS, OpenStreetMap" },
+    cov: "weltweit", cost: "frei mit Quellenangabe", note: "Ruhige, eher amerikanische Topo-Optik. In den Alpen weniger Wanderdetails als OpenTopoMap, dafür sauber beschriftet." },
+  { id: "topplus", g: "Topo weltweit", n: "TopPlusOpen (BKG)", u: "https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png", o: { maxNativeZoom: 18, attribution: '© <a href="https://gdz.bkg.bund.de" target="_blank" rel="noopener">BKG</a> (Datenquellen: amtliche Daten, OpenStreetMap)' },
+    cov: "Deutschland sehr genau, Europa bis Zoom 16, Welt grob", cost: "frei", note: "Amtliche deutsche Karte, sehr klar. Für die Bayerischen Alpen interessant, in Österreich nur mittlere Detailtiefe." },
+  { id: "osm", g: "Topo weltweit", n: "OpenStreetMap Standard", u: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", o: { maxNativeZoom: 19, attribution: OSM },
+    cov: "weltweit", cost: "frei (faire Nutzung)", note: "Zum Vergleich: die bekannte Straßenkarte, ohne Höhenlinien." },
+  { id: "cyclosm", g: "Topo weltweit", n: "CyclOSM", u: "https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", o: { subdomains: "abc", maxNativeZoom: 19, attribution: `CyclOSM · ${OSM}` },
+    cov: "weltweit", cost: "frei", note: "Rad- und MTB-orientiert mit Schummerung. Zeigt Wegqualität (MTB-Skala) recht gut." },
+
+  { id: "bm-std", g: "Österreich", n: "basemap.at Standard", u: bm("geolandbasemap", "png"), o: { ...BM, maxNativeZoom: 19, bounds: AT },
+    cov: "nur Österreich", cost: "frei", note: "Amtliche Verwaltungsgrundkarte. Sehr genau bei Straßen und Gebäuden, aber keine Höhenlinien und kaum Wanderwege." },
+  { id: "bm-gel", g: "Österreich", n: "basemap.at Gelände (Laserscan)", u: bm("bmapgelaende", "jpeg", "grau"), o: { ...BM, maxNativeZoom: 17, bounds: AT },
+    cov: "nur Österreich", cost: "frei", note: "Schummerung aus dem Laserscan-Geländemodell: jede Rinne, jeder Grat ist sichtbar. Gut zur Routenplanung im Gelände, allein aber ohne Beschriftung (Overlay »basemap.at Beschriftung« dazunehmen)." },
+  { id: "ch-lk", g: "Schweiz", n: "swisstopo Landeskarte", now: true, u: ch("ch.swisstopo.pixelkarte-farbe", "jpeg"), o: { ...SWISS, maxNativeZoom: 18, bounds: CH },
+    cov: "Schweiz und Grenzgebiete", cost: "frei", note: "Die beste Bergkarte überhaupt, aber nur im Schweizer Kartengebiet." },
+  { id: "ch-winter", g: "Schweiz", n: "swisstopo Winterkarte", u: ch("ch.swisstopo.pixelkarte-farbe-winter", "jpeg"), o: { ...SWISS, maxNativeZoom: 18, bounds: CH },
+    cov: "Schweiz und Grenzgebiete", cost: "frei", note: "Landeskarte in Winterdarstellung. Zusammen mit den Overlays Skitouren und Hangneigung die Referenz für Skitouren." },
+  { id: "no-topo", g: "Norwegen", n: "Kartverket Topo", u: "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png", o: { maxNativeZoom: 18, bounds: NO, attribution: '© <a href="https://www.kartverket.no" target="_blank" rel="noopener">Kartverket</a>' },
+    cov: "nur Norwegen", cost: "frei", note: "Die offizielle norwegische Topokarte mit Höhenlinien, Hütten und markierten Wegen. Für Lyngen und Hardangervidda deutlich besser als OpenTopoMap." },
+  { id: "no-grey", g: "Norwegen", n: "Kartverket Graustufen", u: "https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png", o: { maxNativeZoom: 18, bounds: NO, attribution: '© <a href="https://www.kartverket.no" target="_blank" rel="noopener">Kartverket</a>' },
+    cov: "nur Norwegen", cost: "frei", note: "Dieselbe Karte in Grautönen. Darauf heben sich der rote Track und die Gipfelpunkte am stärksten ab." },
+  { id: "jp-std", g: "Japan", n: "GSI Standardkarte", u: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", o: { maxNativeZoom: 18, bounds: JP, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a> (GSI)' },
+    cov: "nur Japan", cost: "frei", note: "Amtliche japanische Karte mit Höhenlinien, beschriftet auf Japanisch. Für Niseko und Hokkaido." },
+  { id: "jp-relief", g: "Japan", n: "GSI Farbrelief", u: "https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png", o: { maxNativeZoom: 15, bounds: JP, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a> (GSI)' },
+    cov: "nur Japan", cost: "frei", note: "Höhenstufen in Farbe mit Schummerung." },
+
+  { id: "esri-img", g: "Luftbild & Satellit", n: "Esri Satellit", now: true, u: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 18, attribution: "Bild: © Esri, Maxar, Earthstar Geographics" },
+    cov: "weltweit", cost: "frei mit Quellenangabe", note: "Der jetzige Satellit. Mit den Overlays »Beschriftung«, »Straßen« und »Wanderwege« wird daraus eine brauchbare Hybridkarte." },
+  { id: "bm-ortho", g: "Luftbild & Satellit", n: "basemap.at Orthofoto (29 cm)", u: bm("bmaporthofoto30cm", "jpeg"), o: { ...BM, maxNativeZoom: 19, bounds: AT },
+    cov: "nur Österreich", cost: "frei", note: "Amtliches Luftbild, deutlich schärfer und aktueller als Esri. Mit dem Overlay »basemap.at Beschriftung« ein echtes Hybridbild für Österreich." },
+  { id: "ch-img", g: "Luftbild & Satellit", n: "swisstopo SWISSIMAGE", u: ch("ch.swisstopo.swissimage", "jpeg"), o: { ...SWISS, maxNativeZoom: 19, bounds: CH },
+    cov: "nur Schweiz", cost: "frei", note: "Amtliches Schweizer Luftbild, 10 cm Auflösung." },
+  { id: "jp-photo", g: "Luftbild & Satellit", n: "GSI Luftbild Japan", u: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", o: { maxNativeZoom: 18, bounds: JP, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a> (GSI)' },
+    cov: "nur Japan", cost: "frei", note: "Nahtloses Luftbild von ganz Japan." },
+  { id: "eox", g: "Luftbild & Satellit", n: "Sentinel-2 wolkenfrei (EOX)", u: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg", o: { maxNativeZoom: 14, attribution: 'Sentinel-2 cloudless – <a href="https://s2maps.eu" target="_blank" rel="noopener">s2maps.eu</a> by EOX IT Services GmbH (Copernicus Sentinel data 2020)' },
+    cov: "weltweit", cost: "frei für private Nutzung", note: "Wolkenfreies Satellitenmosaik, gleichmäßige Farben ohne Flicken, aber nur 10 m Auflösung: gut für den Überblick, unscharf beim Hineinzoomen." },
+
+  { id: "mapy-outdoor", g: "Mit kostenlosem Schlüssel", key: "mapy", n: "Mapy.com Outdoor", u: "https://api.mapy.com/v1/maptiles/outdoor/256/{z}/{x}/{y}?apikey={key}", o: { maxNativeZoom: 19, attribution: '<a href="https://mapy.com" target="_blank" rel="noopener">© Seznam.cz a.s. a další</a>' }, view: "turisticka",
+    cov: "Europa sehr gut, weltweit", cost: "Schlüssel, 250 000 Kacheln/Monat gratis", note: "Sehr gute Wanderkarte mit markierten Wegen in Wegfarben, Höhenlinien und Schummerung. In Mitteleuropa eine der schönsten Outdoorkarten." },
+  { id: "mapy-winter", g: "Mit kostenlosem Schlüssel", key: "mapy", n: "Mapy.com Winter", u: "https://api.mapy.com/v1/maptiles/winter/256/{z}/{x}/{y}?apikey={key}", o: { maxNativeZoom: 19, attribution: '<a href="https://mapy.com" target="_blank" rel="noopener">© Seznam.cz a.s. a další</a>' }, view: "zimni",
+    cov: "Europa sehr gut, weltweit", cost: "Schlüssel, 250 000 Kacheln/Monat gratis", note: "Winterkarte mit Pisten, Loipen und Skitourenrouten aus OpenStreetMap." },
+  { id: "mapy-aerial", g: "Mit kostenlosem Schlüssel", key: "mapy", n: "Mapy.com Luftbild", u: "https://api.mapy.com/v1/maptiles/aerial/256/{z}/{x}/{y}?apikey={key}", o: { maxNativeZoom: 19, attribution: '<a href="https://mapy.com" target="_blank" rel="noopener">© Seznam.cz a.s. a další</a>' }, view: "letecka",
+    cov: "AT, CH, DE, FR, CZ, SK, PL, SI scharf, sonst nur bis Zoom 13", cost: "Schlüssel, 250 000 Kacheln/Monat gratis", note: "Luftbild, in Österreich und der Schweiz sehr scharf. Mit dem Overlay »Mapy.com Beschriftung« eine Hybridkarte." },
+  { id: "mt-outdoor", g: "Mit kostenlosem Schlüssel", key: "maptiler", n: "MapTiler Outdoor", u: "https://api.maptiler.com/maps/outdoor-v2/256/{z}/{x}/{y}.png?key={key}", o: { maxNativeZoom: 20, attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">© MapTiler</a> ' + OSM },
+    cov: "weltweit", cost: "Schlüssel, privat gratis (100 000 Anfragen/Monat)", note: "Moderne Outdoorkarte mit Höhenlinien in Metern und klarer Schrift." },
+  { id: "mt-winter", g: "Mit kostenlosem Schlüssel", key: "maptiler", n: "MapTiler Winter", u: "https://api.maptiler.com/maps/winter-v2/256/{z}/{x}/{y}.png?key={key}", o: { maxNativeZoom: 20, attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">© MapTiler</a> ' + OSM },
+    cov: "weltweit", cost: "Schlüssel, privat gratis", note: "Helle Winterkarte mit Pisten, Liften und Skitourenrouten." },
+  { id: "mt-topo", g: "Mit kostenlosem Schlüssel", key: "maptiler", n: "MapTiler Topo", u: "https://api.maptiler.com/maps/topo-v2/256/{z}/{x}/{y}.png?key={key}", o: { maxNativeZoom: 20, attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">© MapTiler</a> ' + OSM },
+    cov: "weltweit", cost: "Schlüssel, privat gratis", note: "Klassische Topo-Optik mit kräftiger Schummerung." },
+  { id: "mt-hybrid", g: "Mit kostenlosem Schlüssel", key: "maptiler", n: "MapTiler Satellit + Beschriftung", u: "https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key={key}", o: { maxNativeZoom: 20, attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">© MapTiler</a> ' + OSM },
+    cov: "weltweit", cost: "Schlüssel, privat gratis", note: "Satellitenbild mit fertiger Beschriftung, Straßen und Grenzen." },
+  { id: "tf-outdoors", g: "Mit kostenlosem Schlüssel", key: "thunderforest", n: "Thunderforest Outdoors", u: "https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey={key}", o: { maxNativeZoom: 22, attribution: 'Karte: © <a href="https://www.thunderforest.com" target="_blank" rel="noopener">Thunderforest</a> · ' + OSM }, site: "https://www.thunderforest.com/maps/outdoors/",
+    cov: "weltweit", cost: "Schlüssel, 150 000 Kacheln/Monat gratis", note: "Bekannte Outdoorkarte mit Wanderwegen, Hütten, Höhenlinien und Gipfeln." },
+  { id: "tf-landscape", g: "Mit kostenlosem Schlüssel", key: "thunderforest", n: "Thunderforest Landscape", u: "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey={key}", o: { maxNativeZoom: 22, attribution: 'Karte: © <a href="https://www.thunderforest.com" target="_blank" rel="noopener">Thunderforest</a> · ' + OSM }, site: "https://www.thunderforest.com/maps/landscape/",
+    cov: "weltweit", cost: "Schlüssel, 150 000 Kacheln/Monat gratis", note: "Betont Landschaft, Wald und Gelände, weniger Straßen." },
+  { id: "ts-topo", g: "Mit kostenlosem Schlüssel", key: "tracestrack", n: "Tracestrack Topo", u: "https://tile.tracestrack.com/topo__/{z}/{x}/{y}.webp?key={key}", o: { maxNativeZoom: 19, attribution: 'Karte: © <a href="https://www.tracestrack.com" target="_blank" rel="noopener">Tracestrack</a> · ' + OSM }, site: "https://www.tracestrack.com/",
+    cov: "weltweit", cost: "Schlüssel, privat gratis", note: "Sehr detaillierte Topo-Karte, kombiniert OpenTopoMap-Stil mit OSM-Details, Beschriftung in Landessprache." },
+  { id: "st-terrain", g: "Mit kostenlosem Schlüssel", key: "stadia", optionalKey: true, n: "Stamen Terrain (Stadia)", u: "https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}.png{keyq}", o: { maxNativeZoom: 18, attribution: '© <a href="https://stadiamaps.com" target="_blank" rel="noopener">Stadia Maps</a> © <a href="https://stamen.com" target="_blank" rel="noopener">Stamen Design</a> · ' + OSM }, site: "https://docs.stadiamaps.com/map-styles/stamen-terrain/",
+    cov: "weltweit", cost: "Konto, privat gratis", note: "Weiche Geländedarstellung mit Schummerung und Vegetation, wenig Detail. Schön als ruhiger Hintergrund." },
+  { id: "st-outdoors", g: "Mit kostenlosem Schlüssel", key: "stadia", optionalKey: true, n: "Stadia Outdoors", u: "https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}.png{keyq}", o: { maxNativeZoom: 20, attribution: '© <a href="https://stadiamaps.com" target="_blank" rel="noopener">Stadia Maps</a> © <a href="https://openmaptiles.org" target="_blank" rel="noopener">OpenMapTiles</a> · ' + OSM }, site: "https://docs.stadiamaps.com/map-styles/outdoors/",
+    cov: "weltweit", cost: "Konto, privat gratis", note: "Moderne Outdoorkarte mit Höhenlinien und Wegen." }
+];
+const OVERLAYS = [
+  { id: "o-labels", g: "Beschriftung & Wege", n: "Beschriftung & Grenzen (Esri)", u: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 18, attribution: "Beschriftung: © Esri" }, note: "Orts-, Berg- und Ländernamen für Luftbilder, weltweit." },
+  { id: "o-roads", g: "Beschriftung & Wege", n: "Straßen (Esri)", u: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", o: { maxNativeZoom: 18, attribution: "Straßen: © Esri" }, note: "Straßen und Bahnen für Luftbilder, weltweit." },
+  { id: "o-bm", g: "Beschriftung & Wege", n: "basemap.at Beschriftung", u: bm("bmapoverlay", "png"), o: { ...BM, maxNativeZoom: 19, bounds: AT }, note: "Namen, Straßen und Gebäude für Österreich, passend zu Orthofoto und Gelände." },
+  { id: "o-mapy-names", g: "Beschriftung & Wege", key: "mapy", n: "Mapy.com Beschriftung", u: "https://api.mapy.com/v1/maptiles/names-overlay/256/{z}/{x}/{y}?apikey={key}", o: { maxNativeZoom: 19, attribution: '<a href="https://mapy.com" target="_blank" rel="noopener">© Seznam.cz a.s. a další</a>' }, note: "Namen und Grenzen, gedacht für das Mapy-Luftbild. Braucht den Mapy-Schlüssel." },
+  { id: "o-hike", g: "Beschriftung & Wege", n: "Wanderwege (Waymarked Trails)", u: "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", o: { maxNativeZoom: 17, attribution: 'Wanderwege: <a href="https://hiking.waymarkedtrails.org" target="_blank" rel="noopener">waymarkedtrails.org</a> · ' + OSM }, note: "Markierte Wanderrouten in Farbe, weltweit. Macht aus jedem Luftbild eine Wanderkarte." },
+  { id: "o-mtb", g: "Beschriftung & Wege", n: "MTB-Routen (Waymarked Trails)", u: "https://tile.waymarkedtrails.org/mtb/{z}/{x}/{y}.png", o: { maxNativeZoom: 17, attribution: 'MTB: <a href="https://mtb.waymarkedtrails.org" target="_blank" rel="noopener">waymarkedtrails.org</a> · ' + OSM }, note: "Ausgeschilderte Mountainbike-Routen." },
+  { id: "o-ch-hike", g: "Beschriftung & Wege", n: "Wanderwege Schweiz (swisstopo)", u: ch("ch.swisstopo.swisstlm3d-wanderwege", "png"), o: { ...SWISS, maxNativeZoom: 18, bounds: CH }, note: "Offizielles Schweizer Wanderwegnetz mit Kategorie (gelb, weiß-rot-weiß, weiß-blau-weiß)." },
+  { id: "o-pistes", g: "Winter & Skitouren", n: "Pisten & Loipen (OpenSnowMap)", u: "https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png", o: { maxNativeZoom: 18, attribution: 'Pisten: <a href="https://www.opensnowmap.org" target="_blank" rel="noopener">OpenSnowMap</a> · ' + OSM }, note: "Skipisten, Lifte, Loipen und in OpenStreetMap eingetragene Skitouren, weltweit." },
+  { id: "o-ch-ski", g: "Winter & Skitouren", n: "Skitouren Schweiz (swisstopo)", u: ch("ch.swisstopo-karto.skitouren", "png"), o: { ...SWISS, maxNativeZoom: 18, bounds: CH }, note: "Die Skitourenrouten der Schweizer Skitourenkarte, mit SAC-Schwierigkeit." },
+  { id: "o-ch-snowshoe", g: "Winter & Skitouren", n: "Schneeschuhrouten Schweiz", u: ch("ch.swisstopo-karto.schneeschuhrouten", "png"), o: { ...SWISS, maxNativeZoom: 18, bounds: CH }, note: "Schneeschuhrouten der Schweizer Landeskarte." },
+  { id: "o-ch-wild", g: "Winter & Skitouren", n: "Wildruhezonen Schweiz", u: ch("ch.bafu.wrz-wildruhezonen_portal", "png"), o: { attribution: '© <a href="https://www.bafu.admin.ch" target="_blank" rel="noopener">BAFU</a>', maxNativeZoom: 18, bounds: CH }, note: "Gebiete, die im Winter nicht betreten werden dürfen." },
+  { id: "o-slope", g: "Hangneigung", n: "Hangneigung berechnet (weltweit)", custom: "slope", note: "Wird im Browser aus frei verfügbaren Höhendaten berechnet: gelb ab 30°, orange ab 35°, rot ab 40°, violett ab 45°. In Österreich und Norwegen aus 10-m-Geländemodellen, sonst etwa 30 m. Erst ab Zoom 11 sichtbar." },
+  { id: "o-ch-slope", g: "Hangneigung", n: "Hangneigung über 30° Schweiz (swisstopo)", u: ch("ch.swisstopo.hangneigung-ueber_30", "png"), o: { ...SWISS, maxNativeZoom: 17, bounds: CH, opacity: 0.75 }, note: "Amtliche Hangneigungsklassen der Schweiz, sehr genau." }
+];
+const ALL = [...BASES, ...OVERLAYS];
+const byId = (id) => ALL.find((x) => x.id === id);
+
+/* ---------- computed slope layer from Terrarium elevation tiles ---------- */
+const SLOPE_COLORS = [[45, [130, 0, 170]], [40, [220, 20, 20]], [35, [255, 140, 0]], [30, [255, 225, 0]]];
+const slopeCache = new Map();
+function slopeImage(z, x, y) {
+  const k = `${z}/${x}/${y}`;
+  if (slopeCache.has(k)) return slopeCache.get(k);
+  const p = new Promise((resolve, reject) => {
+    const img = new Image(); img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas"); c.width = c.height = 256;
+        const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0);
+        const src = ctx.getImageData(0, 0, 256, 256).data, ele = new Float32Array(256 * 256);
+        for (let i = 0; i < ele.length; i++) ele[i] = src[i * 4] * 256 + src[i * 4 + 1] + src[i * 4 + 2] / 256 - 32768;
+        const n = 2 ** z, latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 0.5) / n)));
+        const res = 40075016.686 * Math.cos(latRad) / (256 * n);
+        const out = ctx.createImageData(256, 256), d = out.data;
+        for (let r = 0; r < 256; r++) for (let q = 0; q < 256; q++) {
+          const l = ele[r * 256 + Math.max(0, q - 1)], rr = ele[r * 256 + Math.min(255, q + 1)], u = ele[Math.max(0, r - 1) * 256 + q], dn = ele[Math.min(255, r + 1) * 256 + q];
+          const dx = (rr - l) / ((Math.min(255, q + 1) - Math.max(0, q - 1)) * res), dy = (dn - u) / ((Math.min(255, r + 1) - Math.max(0, r - 1)) * res);
+          const deg = Math.atan(Math.sqrt(dx * dx + dy * dy)) * 180 / Math.PI;
+          const hit = SLOPE_COLORS.find(([t]) => deg >= t);
+          if (hit) { const o = (r * 256 + q) * 4; d[o] = hit[1][0]; d[o + 1] = hit[1][1]; d[o + 2] = hit[1][2]; d[o + 3] = 150; }
+        }
+        ctx.putImageData(out, 0, 0);
+        resolve(c);
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => reject(new Error("Höhendaten nicht erreichbar"));
+    img.src = `https://elevation-tiles-prod.s3.amazonaws.com/terrarium/${z}/${x}/${y}.png`;
+  });
+  if (slopeCache.size > 300) slopeCache.clear();
+  slopeCache.set(k, p);
+  p.catch(() => slopeCache.delete(k));
+  return p;
+}
+const SlopeLayer = L.GridLayer.extend({
+  options: { minZoom: 11, maxZoom: 19, opacity: 1, zIndex: 20, attribution: 'Höhendaten: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a> (u. a. © offene Daten Österreichs DGM, © Kartverket, SRTM)' },
+  createTile(coords, done) {
+    const tile = document.createElement("canvas"); tile.width = tile.height = 256;
+    const zz = Math.min(coords.z, 15), f = 2 ** (coords.z - zz);
+    const sx = Math.floor(coords.x / f), sy = Math.floor(coords.y / f);
+    slopeImage(zz, sx, sy).then((c) => {
+      const ctx = tile.getContext("2d"); ctx.imageSmoothingEnabled = false;
+      const s = 256 / f; ctx.drawImage(c, (coords.x - sx * f) * s, (coords.y - sy * f) * s, s, s, 0, 0, 256, 256);
+      done(null, tile);
+    }, (e) => done(e, tile));
+    return tile;
+  }
+});
+
+/* ---------- places ---------- */
+const PLACES = [
+  ["Hoher Dachstein", 47.4752, 13.6057, 14], ["Großglockner", 47.0747, 12.6939, 14], ["Ötscher", 47.8619, 15.2025, 14], ["Stubaier Alpen (Skitouren)", 47.06, 11.15, 13],
+  ["Monte Rosa / Signalkuppe", 45.9272, 7.8768, 14], ["Berner Oberland (Jungfrau)", 46.5368, 7.9626, 13],
+  ["Lyngenalpen", 69.60, 20.20, 12], ["Hardangervidda (Hårteigen)", 60.1931, 7.0692, 13], ["Sunnmøre", 62.24, 6.62, 12],
+  ["Niseko", 42.8640, 140.6870, 13], ["Vinicunca (Peru)", -13.8697, -71.3030, 14]
+];
+let myTours = [];
+try { const c = JSON.parse(lsGet("gb-cache-v2") || "null"); myTours = (c && c.data && Array.isArray(c.data.tours) ? c.data.tours : []).filter((t) => t && (t.lat != null || (Array.isArray(t.trk) && t.trk.length))); } catch (e) { myTours = []; }
+myTours.sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")));
+function decodeLine(str) {
+  const pts = []; let i = 0, la = 0, lo = 0;
+  const dec = () => { let r = 0, sh = 0, b; do { b = str.charCodeAt(i++) - 63; r |= (b & 0x1f) << sh; sh += 5; } while (b >= 0x20); return r & 1 ? ~(r >> 1) : r >> 1; };
+  while (i < str.length) { la += dec(); lo += dec(); if (i <= str.length) pts.push([la / 1e5, lo / 1e5]); }
+  return pts;
+}
+const tourSegs = (t) => (Array.isArray(t.trk) ? t.trk : []).filter((s) => typeof s === "string" && s).map(decodeLine).filter((s) => s.length > 1);
+const fmtDate = (iso) => { const [y, m, d] = String(iso || "").split("-"); return d ? `${d}.${m}.${y}` : ""; };
+
+/* ---------- state ---------- */
+let saved = {}; try { saved = JSON.parse(lsGet("kv-state") || "{}") || {}; } catch (e) { saved = {}; }
+const state = {
+  split: saved.split !== false,
+  A: { base: byId(saved.Abase) ? saved.Abase : "otm-r", ovl: Array.isArray(saved.Aovl) ? saved.Aovl : [] },
+  B: { base: byId(saved.Bbase) ? saved.Bbase : "no-topo", ovl: Array.isArray(saved.Bovl) ? saved.Bovl : [] },
+  view: saved.view || { lat: 47.4752, lon: 13.6057, z: 13 }, showTours: saved.showTours !== false
+};
+const persist = () => lsSet("kv-state", JSON.stringify({ split: state.split, Abase: state.A.base, Aovl: state.A.ovl, Bbase: state.B.base, Bovl: state.B.ovl, view: state.view, showTours: state.showTours }));
+
+/* ---------- panes ---------- */
+const panes = {};
+function baseOptions(sel) {
+  const groups = [...new Set(BASES.map((b) => b.g))];
+  return groups.map((g) => `<optgroup label="${esc(g)}">${BASES.filter((b) => b.g === g).map((b) => `<option value="${b.id}"${b.id === sel ? " selected" : ""}>${esc(b.n)}${b.now ? " · jetzt im Gipfelbuch" : ""}${b.key && !(keys[b.key] || b.optionalKey) ? " · Schlüssel nötig" : ""}</option>`).join("")}</optgroup>`).join("");
+}
+function ovlList(side) {
+  const groups = [...new Set(OVERLAYS.map((o) => o.g))];
+  return groups.map((g) => `<h3>${esc(g)}</h3>` + OVERLAYS.filter((o) => o.g === g).map((o) => `<label class="ovrow"><input type="checkbox" data-ov="${o.id}"${state[side].ovl.includes(o.id) ? " checked" : ""}><span>${esc(o.n)}${o.key && !keys[o.key] ? " · Schlüssel nötig" : ""}<span class="st" data-st="${o.id}"></span></span><small>${esc(o.note)}</small></label>`).join("")).join("");
+}
+function buildPane(side) {
+  const el = $("pane" + side);
+  el.innerHTML = `<div class="bar"><select data-base aria-label="Karte ${side === "A" ? "links" : "rechts"}">${baseOptions(state[side].base)}</select>
+    <details class="ovl"><summary>Overlays <span class="n" data-n></span></summary><div class="ovlist">${ovlList(side)}</div></details></div>
+    <div class="mapbox"><div class="map"></div><div class="keyneed" hidden></div></div>
+    <div class="info" aria-live="polite"></div>`;
+  const map = L.map(el.querySelector(".map"), { zoomControl: true, minZoom: 2, maxZoom: 19, worldCopyJump: true }).setView([state.view.lat, state.view.lon], state.view.z);
+  map.attributionControl.setPrefix(false);
+  L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
+  const P = { side, el, map, base: null, ovl: new Map(), stat: new Map(), tours: L.layerGroup().addTo(map), sel: L.layerGroup().addTo(map), legend: null };
+  panes[side] = P;
+  el.querySelector("[data-base]").addEventListener("change", (e) => { state[side].base = e.target.value; setBase(P); persist(); });
+  el.querySelector(".ovlist").addEventListener("change", (e) => {
+    const id = e.target.dataset.ov; if (!id) return;
+    const list = state[side].ovl;
+    if (e.target.checked) { if (!list.includes(id)) list.push(id); } else state[side].ovl = list.filter((x) => x !== id);
+    setOverlays(P); persist();
+  });
+  el.querySelector(".info").addEventListener("click", (e) => { if (e.target.closest("[data-more]")) el.querySelector(".info").classList.toggle("more"); });
+  map.on("moveend", () => { const c = map.getCenter(); state.view = { lat: +c.lat.toFixed(5), lon: +c.lng.toFixed(5), z: map.getZoom() }; persist(); renderInfo(P); });
+  setBase(P); setOverlays(P); drawTours(P);
+  return P;
+}
+const fill = (u, key) => u.replace("{key}", encodeURIComponent(key || "")).replace("{keyq}", key ? "?api_key=" + encodeURIComponent(key) : "");
+function track(P, id, layer, def) {
+  const s = { ok: 0, err: 0 }; P.stat.set(id, s);
+  layer.on("loading", () => { s.ok = 0; s.err = 0; renderInfo(P); });
+  layer.on("tileload", () => { s.ok++; if (s.ok === 1 || s.ok % 8 === 0) renderInfo(P); });
+  layer.on("tileerror", () => { s.err++; if (s.err === 1 || s.err % 8 === 0) renderInfo(P); });
+  layer.on("load", () => renderInfo(P));
+  return layer;
+}
+function makeLayer(P, def, isBase) {
+  if (def.custom === "slope") return track(P, def.id, new SlopeLayer(), def);
+  if (def.key && !keys[def.key] && !def.optionalKey) return null;
+  const o = { maxZoom: 19, ...def.o }; if (!isBase) o.zIndex = 10;
+  return track(P, def.id, L.tileLayer(fill(def.u, keys[def.key]), o), def);
+}
+function setBase(P) {
+  const def = byId(state[P.side].base) || BASES[0];
+  if (P.base) P.map.removeLayer(P.base);
+  P.base = makeLayer(P, def, true);
+  if (P.base) { P.base.addTo(P.map); P.base.bringToBack(); }
+  const kn = P.el.querySelector(".keyneed");
+  if (!P.base && def.key) {
+    const pr = PROVIDERS[def.key];
+    kn.innerHTML = `<b>${esc(def.n)}</b><p>Für diese Karte brauchst du einen kostenlosen Schlüssel von ${esc(pr.name)}. ${esc(pr.hint)}</p>
+      <div class="row"><button class="btn" type="button" data-openkeys>Schlüssel eintragen</button>${viewLink(def, P) ? `<a class="btn" href="${esc(viewLink(def, P))}" target="_blank" rel="noopener">Beim Anbieter ansehen ↗</a>` : ""}</div>`;
+    kn.hidden = false;
+  } else kn.hidden = true;
+  renderInfo(P);
+}
+function viewLink(def, P) {
+  const c = P.map.getCenter(), z = P.map.getZoom();
+  if (def.view) return `https://mapy.com/de/${def.view}?x=${c.lng.toFixed(5)}&y=${c.lat.toFixed(5)}&z=${z}`;
+  if (def.key === "maptiler") return "https://www.maptiler.com/maps/";
+  return def.site || "";
+}
+function setOverlays(P) {
+  const want = state[P.side].ovl;
+  for (const [id, layer] of P.ovl) if (!want.includes(id)) { P.map.removeLayer(layer); P.ovl.delete(id); }
+  for (const id of want) {
+    if (P.ovl.has(id)) continue;
+    const def = byId(id); if (!def) continue;
+    const layer = makeLayer(P, def, false);
+    if (layer) { layer.addTo(P.map); P.ovl.set(id, layer); }
+  }
+  const slopeOn = P.ovl.has("o-slope");
+  if (slopeOn && !P.legend) {
+    P.legend = L.control({ position: "bottomright" });
+    P.legend.onAdd = () => { const d = L.DomUtil.create("div", "slopelegend"); d.innerHTML = [["#FFE100", "30–35°"], ["#FF8C00", "35–40°"], ["#DC1414", "40–45°"], ["#8200AA", "über 45°"]].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join(""); return d; };
+    P.legend.addTo(P.map);
+  } else if (!slopeOn && P.legend) { P.legend.remove(); P.legend = null; }
+  P.el.querySelector("[data-n]").textContent = want.length ? `(${want.length})` : "";
+  renderInfo(P);
+}
+function statusOf(P, def, layer) {
+  if (def.key && !keys[def.key] && !def.optionalKey) return ["bad", "Schlüssel fehlt"];
+  const z = P.map.getZoom();
+  if (def.custom === "slope" && z < 11) return ["out", "erst ab Zoom 11"];
+  const b = def.o && def.o.bounds;
+  if (b && !L.latLngBounds(b).intersects(P.map.getBounds())) return ["out", "außerhalb des Gebiets"];
+  const s = P.stat.get(def.id); if (!layer || !s) return ["wait", ""];
+  if (s.ok > 0) return ["ok", "✓ lädt"];
+  if (s.err > 0) return ["bad", "✗ keine Kacheln"];
+  return ["wait", "lädt …"];
+}
+function renderInfo(P) {
+  const def = byId(state[P.side].base) || BASES[0];
+  const [cls, txt] = statusOf(P, def, P.base);
+  const free = !def.key;
+  P.el.querySelector(".info").innerHTML = `<div class="tags"><span class="name">${esc(def.n)}</span>${def.now ? '<span class="tag now">jetzt im Gipfelbuch</span>' : ""}<span class="tag ${free ? "free" : "key"}">${esc(def.cost)}</span><span class="tag">${esc(def.cov)}</span><span class="st ${cls}">${esc(txt)}</span><button class="linkbtn" type="button" data-more style="border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:12.5px">Info</button></div><p>${esc(def.note)}</p>`;
+  for (const id of state[P.side].ovl) {
+    const o = byId(id), span = P.el.querySelector(`[data-st="${id}"]`); if (!o || !span) continue;
+    const [c2, t2] = statusOf(P, o, P.ovl.get(id)); span.className = "st " + c2; span.textContent = t2 ? " · " + t2 : "";
+  }
+}
+function drawTours(P) {
+  P.tours.clearLayers();
+  if (!state.showTours) return;
+  for (const t of myTours) {
+    if (t.lat == null || t.lon == null) continue;
+    L.circleMarker([+t.lat, +t.lon], { radius: 4.5, color: "#FFFFFF", weight: 1.5, fillColor: "#24364A", fillOpacity: 1 })
+      .bindTooltip(esc(t.g || t.r || ""), { direction: "top", offset: [0, -4] }).addTo(P.tours);
+  }
+}
+
+/* ---------- keep both maps on the same spot ---------- */
+let syncing = false;
+function syncFrom(src) {
+  if (syncing) return; syncing = true;
+  for (const P of Object.values(panes)) if (P.map !== src) P.map.setView(src.getCenter(), src.getZoom(), { animate: false });
+  syncing = false;
+}
+
+/* ---------- header ---------- */
+function buildGoto() {
+  const tourOpts = myTours.map((t, i) => `<option value="t${i}">${esc((t.g || t.r || "Ohne Namen") + (t.d ? " · " + fmtDate(t.d) : ""))}</option>`).join("");
+  $("goto").innerHTML = `<option value="">Ort oder Tour anspringen …</option><optgroup label="Orte">${PLACES.map((p, i) => `<option value="p${i}">${esc(p[0])}</option>`).join("")}</optgroup>${tourOpts ? `<optgroup label="Meine Touren (mit Track)">${tourOpts}</optgroup>` : ""}`;
+  $("showTours").closest("label").hidden = !myTours.length;
+}
+$("goto").addEventListener("change", (e) => {
+  const v = e.target.value; e.target.value = ""; if (!v) return;
+  const A = panes.A.map;
+  for (const P of Object.values(panes)) P.sel.clearLayers();
+  if (v[0] === "p") { const p = PLACES[+v.slice(1)]; A.setView([p[1], p[2]], p[3]); return; }
+  const t = myTours[+v.slice(1)]; if (!t) return;
+  const segs = tourSegs(t), b = L.latLngBounds([]);
+  for (const s of segs) for (const pt of s) b.extend(pt);
+  if (t.lat != null) b.extend([+t.lat, +t.lon]);
+  for (const P of Object.values(panes)) {
+    if (segs.length) L.polyline(segs, { color: "#E0102F", weight: 4, opacity: 0.95, interactive: false }).addTo(P.sel);
+    if (t.lat != null) L.circleMarker([+t.lat, +t.lon], { radius: 9, color: "#1C242C", weight: 3, fillColor: "#E0102F", fillOpacity: 1, interactive: false }).addTo(P.sel);
+  }
+  if (b.isValid()) { if (b.getNorthEast().equals(b.getSouthWest())) A.setView(b.getCenter(), 14); else A.fitBounds(b, { padding: [30, 30], maxZoom: 15 }); }
+});
+$("showTours").checked = state.showTours;
+$("showTours").addEventListener("change", (e) => { state.showTours = e.target.checked; for (const P of Object.values(panes)) drawTours(P); persist(); });
+function applySplit() {
+  $("panes").classList.toggle("single", !state.split);
+  $("splitBtn").setAttribute("aria-pressed", state.split ? "true" : "false");
+  $("splitBtn").textContent = state.split ? "Zwei Karten" : "Eine Karte";
+  setTimeout(() => { for (const P of Object.values(panes)) P.map.invalidateSize(); syncFrom(panes.A.map); }, 60);
+}
+$("splitBtn").addEventListener("click", () => { state.split = !state.split; applySplit(); persist(); });
+
+/* ---------- keys ---------- */
+function renderKeyRows() {
+  $("keyRows").innerHTML = Object.entries(PROVIDERS).map(([id, p]) => `<div class="keyrow"><label for="key-${id}">${esc(p.name)} <a href="${esc(p.signup)}" target="_blank" rel="noopener">Kostenlos anmelden ↗</a></label>
+    <input id="key-${id}" data-key="${id}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel einfügen" value="${esc(keys[id] || "")}"><small>${esc(p.hint)}</small></div>`).join("");
+}
+function openKeys() { renderKeyRows(); $("keySheet").hidden = false; }
+function closeKeys() {
+  for (const inp of document.querySelectorAll("[data-key]")) { const v = inp.value.trim(); if (v) keys[inp.dataset.key] = v; else delete keys[inp.dataset.key]; }
+  lsSet("kv-keys", JSON.stringify(keys));
+  $("keySheet").hidden = true;
+  for (const P of Object.values(panes)) {
+    P.el.querySelector("[data-base]").innerHTML = baseOptions(state[P.side].base);
+    P.el.querySelector(".ovlist").innerHTML = ovlList(P.side);
+    for (const [id, layer] of P.ovl) { P.map.removeLayer(layer); } P.ovl.clear();
+    setBase(P); setOverlays(P);
+  }
+}
+$("keysBtn").addEventListener("click", openKeys);
+$("keyClose").addEventListener("click", closeKeys);
+$("keySheet").addEventListener("click", (e) => { if (e.target === $("keySheet")) closeKeys(); });
+document.addEventListener("click", (e) => { if (e.target.closest("[data-openkeys]")) openKeys(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("keySheet").hidden) closeKeys(); });
+// close an open overlay list when tapping elsewhere
+document.addEventListener("click", (e) => { for (const d of document.querySelectorAll(".ovl[open]")) if (!d.contains(e.target)) d.open = false; });
+
+/* ---------- start ---------- */
+buildGoto();
+buildPane("A"); buildPane("B");
+panes.A.map.on("move", () => syncFrom(panes.A.map));
+panes.B.map.on("move", () => syncFrom(panes.B.map));
+applySplit();
+})();
+</script>
+</body>
+</html>
