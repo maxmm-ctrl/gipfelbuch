@@ -898,7 +898,7 @@ const tourLayer = L.layerGroup().addTo(map);
 const bucketLayer = L.layerGroup().addTo(map);
 const previewLayer = L.layerGroup().addTo(map);
 const formLayer = L.layerGroup().addTo(map);
-let markerIndex = new Map(), stageIndex = new Map();
+let markerIndex = new Map(), stageIndex = new Map(), markerAt = new Map();
 const syncLabels = () => $("map").classList.toggle("labels", map.getZoom() >= 12);
 map.on("zoomend", syncLabels); syncLabels();
 
@@ -1021,7 +1021,7 @@ function renderStats(T) {
     `<span><b>${nf.format(Math.round(hm))}</b> Hm</span>` + (km ? `<span><b>${nf.format(Math.round(km))}</b> km</span>` : "");
 }
 function renderMarkers(T, B) {
-  tourLayer.clearLayers(); bucketLayer.clearLayers(); stageLayer.clearLayers(); trackLayer.clearLayers(); markerIndex = new Map(); trackIndex = new Map(); stageIndex = new Map();
+  tourLayer.clearLayers(); bucketLayer.clearLayers(); stageLayer.clearLayers(); trackLayer.clearLayers(); markerIndex = new Map(); trackIndex = new Map(); stageIndex = new Map(); markerAt = new Map();
   const allTracks = map.hasLayer(trackLayer);
   const visible = (t) => isSummit(t) ? state.showPeaks : state.showRoutes;
   for (const t of allTracks ? T : []) {
@@ -1062,7 +1062,7 @@ function renderMarkers(T, B) {
     m._gbRef = ref;
     m.on("click", () => { if (pickTarget) return; const d = { kind: "tour", ref }; openDetail(d); fitDetail(d, true); });
     m.bindTooltip(esc(first.name), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
-    tourLayer.addLayer(m);
+    tourLayer.addLayer(m); markerAt.set("t" + keyOf(first), m);
     for (const e of entries) if (e.main || !markerIndex.has(e.id)) markerIndex.set(e.id, m);
   }
   if (!state.showBucket) return;
@@ -1072,7 +1072,7 @@ function renderMarkers(T, B) {
     const id = b.id;
     m.on("click", () => { if (pickTarget) return; openDetail({ kind: "bucket", id }); });
     m.bindTooltip(esc(b.g || b.r || ""), { permanent: true, direction: "right", offset: [9, 0], className: "peak" });
-    bucketLayer.addLayer(m);
+    bucketLayer.addLayer(m); markerAt.set("b" + keyOf(b), m);
     markerIndex.set(b.id, m);
   }
 }
@@ -1154,14 +1154,27 @@ function mtDetail(name) {
 }
 const selLayer = L.layerGroup().addTo(map);
 let detailStack = [];
+let selHidden = null; // the original marker whose label moved to the enlarged copy
 function clearSelection() {
   selLayer.clearLayers(); highlightTracks([]);
   stageIndex.forEach((pl) => pl.setStyle({ opacity: 0.85 }));
+  if (selHidden && map.hasLayer(selHidden)) selHidden.openTooltip();
+  selHidden = null;
 }
-function selRing(p) {
+// the selected point: the same symbol 1.5× larger with a dark edge, drawn on top of the original
+function selMark(p, kind, tour) {
   if (!p || !hasPos(p)) return;
-  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#C8102E";
-  selLayer.addLayer(L.circleMarker([+p.lat, +p.lon], { renderer: ptsR, radius: 15, color: accent, weight: 3, fill: false, interactive: false }));
+  const m = markerAt.get((kind === "bucket" ? "b" : "t") + keyOf(p));
+  const tri = m ? m instanceof TriMarker : kind !== "bucket" && (!tour || isSummit(tour));
+  const o = m ? m.options : { fillColor: kind === "bucket" ? "#FFFFFF" : colorFor(tour && tour.s), fillOpacity: kind === "bucket" ? 0.9 : 1 };
+  const r = (m ? m.getRadius() : kind === "bucket" ? 8 : 7.5) * 1.5;
+  const sel = new (tri ? TriMarker : L.CircleMarker)([+p.lat, +p.lon], {
+    renderer: ptsR, interactive: false, radius: r, color: "#1C242C", weight: 3, fillColor: o.fillColor, fillOpacity: o.fillOpacity, dashArray: kind === "bucket" ? "4 3" : null
+  });
+  const label = m && m.getTooltip() ? m.getTooltip().getContent() : esc(p.name || "");
+  if (label) sel.bindTooltip(label, { permanent: true, direction: "right", offset: [Math.round(r * (tri ? 1.2 : 1)) + 4, 0], className: "peak" });
+  selLayer.addLayer(sel);
+  if (m && m.getTooltip()) { m.closeTooltip(); selHidden = m; }
 }
 // push: opened from inside the panel (stage ↔ Mehrtagestour), so ← goes back there
 function openDetail(d, push) {
@@ -1179,7 +1192,7 @@ function renderDetail(toTop) {
   $("detailBody").innerHTML = r.html;
   if (toTop) $("detailBody").parentElement.scrollTop = 0;
   clearSelection();
-  if (d.kind === "bucket") { selRing(bucketItems().find((x) => x.id === d.id)); return; }
+  if (d.kind === "bucket") { const b = bucketItems().find((x) => x.id === d.id); selMark(b && { ...b, name: b.g || b.r }, "bucket"); return; }
   // tracks of the selection: the tour(s) at this point, and all stages of its Mehrtagestour (thinner)
   const primary = new Set(d.kind === "tour" ? d.ref.map((x) => x.id) : []);
   const t0 = d.kind === "tour" ? tours().find((t) => t.id === d.ref[0].id) : null;
@@ -1196,7 +1209,7 @@ function renderDetail(toTop) {
   }
   highlightTracks([...ids]);
   if (mtName && allHave && stageIndex.has(mtName)) stageIndex.get(mtName).setStyle({ opacity: 0 });
-  if (d.kind === "tour") selRing(d.ref[0]);
+  if (d.kind === "tour") selMark(d.ref[0], "tour", t0);
 }
 // move the map to the selection; onlyIfNeeded: keep the view when everything is already visible
 function fitDetail(d, onlyIfNeeded) {
