@@ -18,10 +18,12 @@ Persönliches Gipfel- und Tourenbuch als Web-App: topografische Karte, GPX-Auswe
 - **Gipfel ja/nein:** Schalter »Gipfel« im Formular (standardmäßig an). Routen ohne Gipfel zählen nicht in der Gipfelstatistik, Gipfel am Weg zählen trotzdem.
 - **Mehrtagestouren:** ein Tipp auf den Namen (↔) öffnet die Übersicht mit Zeitraum, Summen, Gipfeln und Etappen.
 - **Bucketlist:** Ziele mit Priorität. Sobald derselbe Gipfel (und ggf. die Route) im Gipfelbuch steht, gilt das Ziel als erledigt.
-- **Statistik:** Touren, Gipfel, Tage, Höhenmeter pro Jahr und Sportart, Mehrtagestouren.
+- **Statistik:** Touren, Gipfel, Tage, Höhenmeter (auch als Vielfaches des Mount Everest), Gipfel über 3000 und 4000 m; persönliche Rekorde (höchster Gipfel, meiste Höhenmeter, Distanz und Zeit an einem Tag, längste Mehrtagestour, schwierigste Route), jeder mit Link zur Tour; Länder mit Gipfel (von 195) mit Flaggen, Kontinenten und Welt- bzw. Europakarte; Höhenmeter pro Jahr und Sportart, Mehrtagestouren.
 - **Excel:** Export als Backup, Import aus einer Excel-Liste.
 - Jede Änderung ist ein Commit im Datenrepository, der Verlauf ist dort einsehbar und wiederherstellbar.
 
 ## Kartendaten
 
 OpenTopoMap-R und OpenHikingMap über [openmaps.fr](https://openmaps.fr) (CC-BY-SA), Daten © OpenStreetMap-Mitwirkende, SRTM · swisstopo · Esri World Imagery.
+
+Weltkarte der Statistik (`welt.json`): Ländergrenzen von [Natural Earth](https://www.naturalearthdata.com) (gemeinfrei) über world-atlas, vorab projiziert. Flaggen: [flag-icons](https://github.com/lipis/flag-icons) (MIT).

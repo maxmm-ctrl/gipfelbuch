@@ -189,6 +189,51 @@ ol.steps code { font-size: 13px; background: var(--chip); padding: 1px 5px; bord
 .kpi { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
 .kpi b { font: 700 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kpi span { font-size: 12px; color: var(--muted); }
+.kpi b small { font: 600 15px/1 var(--f-body); color: var(--muted); }
+.recs { display: grid; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.rec { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 12px; padding: 9px 12px; border: 0; background: none; text-align: left; cursor: pointer; width: 100%; align-items: center; }
+.rec + .rec { border-top: 1px solid var(--line); }
+.rec:hover { background: var(--chip); }
+.rec .l { font-size: 12.5px; color: var(--muted); }
+.rec .m { font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.rec .m small { white-space: nowrap; }
+.rec .m small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.rec .v { grid-column: 2; grid-row: 1 / span 2; font: 700 18px/1.1 var(--f-display); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.everest { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 12px; }
+.everest .evs { display: flex; flex-wrap: wrap; gap: 3px; max-width: 46%; flex: none; }
+.everest .evs svg { width: 18px; height: 16px; display: block; }
+.everest .evs .e0 { fill: var(--line); }
+.everest .evs .e1 { fill: var(--accent); }
+.everest p { margin: 0; display: grid; gap: 1px; min-width: 0; }
+.everest b { font: 700 18px/1.15 var(--f-display); }
+.everest span { font-size: 12.5px; color: var(--muted); }
+.worldhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+.legend2 { display: flex; gap: 12px; font-size: 12.5px; color: var(--muted); }
+.legend2 i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--accent); margin-right: 5px; vertical-align: -1px; }
+.legend2 i.half { opacity: .35; }
+.seg.mini { flex: none; }
+.seg.mini button { padding: 5px 10px; font-size: 13px; }
+.world { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; min-height: 60px; }
+.world svg { display: block; width: 100%; height: auto; }
+.world path { fill: var(--line); stroke: var(--surface); stroke-width: .6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.world .sea { fill: var(--bg); stroke: none; }
+.world .on { fill: var(--accent); }
+.world .half { fill: var(--accent); fill-opacity: .35; }
+.world circle { stroke: var(--surface); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.world .msg { padding: 18px 12px; font-size: 13px; color: var(--muted); }
+.conts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cont { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 13px; color: var(--muted); background: transparent; }
+.cont.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.cont b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ctrys { display: grid; }
+.ctry { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 1px 10px; padding: 7px 0; border-bottom: 1px solid var(--line); align-items: center; font-size: 14px; }
+.ctry:last-child { border-bottom: 0; }
+.ctry .flag { width: 22px; height: 16px; border-radius: 2px; box-shadow: 0 0 0 1px var(--line); object-fit: cover; background: var(--chip); display: block; }
+.ctry .n { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctry .r { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctry .meta { grid-column: 2 / 4; color: var(--muted); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctry .meta .linkbtn { font-size: 12.5px; }
+.ctry.dim .n, .ctry.dim .flag { opacity: .6; }
 .tblwrap { overflow-x: auto; }
 table.t { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 table.t th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line); }
@@ -541,7 +586,7 @@ const EXTRA = {
 const LWS = ["", "gering", "mäßig", "erheblich", "groß", "sehr groß"];
 // public Overpass servers are often busy: try them one after another
 const OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
-const LS = { theme: "gb-theme", token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2", alltrk: "gb-alltracks", map: "gb-map", ovl: "gb-ovl", s2: "gb-s2", s2layer: "gb-s2layer", s2id: "gb-s2id", sheet: "gb-sheet", keyImp: "gb-keys-imported" };
+const LS = { theme: "gb-theme", token: "gb-token", repo: "gb-repo", cache: "gb-cache-v2", base: "gipfelbuch-base", gpx: "gipfelbuch-gpx-v2", alltrk: "gb-alltracks", map: "gb-map", ovl: "gb-ovl", s2: "gb-s2", s2layer: "gb-s2layer", s2id: "gb-s2id", sheet: "gb-sheet", keyImp: "gb-keys-imported", world: "gb-world" };
 const DEFAULT_REPO = "maxmm-ctrl/gipfelbuch-daten";
 const FILE = "gipfelbuch.json";
 const XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
@@ -1251,10 +1296,12 @@ map.on("zoomend", syncLabels); syncLabels();
 
 /* ===================== views ===================== */
 const VIEWS = ["setup", "browse", "detail", "gpx", "form", "stats", "settings"];
-let browseScroll = null;
+let browseScroll = null, detailFrom = null, statsScroll = 0;
 function show(v) {
   setMapFull(false);
   if (state.view === "browse" && v !== "browse") browseScroll = { v: $("v-browse").scrollTop, l: $("list").scrollTop };
+  if (state.view === "stats" && v !== "stats") statsScroll = $("statsBody").parentElement.scrollTop;
+  if (v !== "detail" && v !== "stats") detailFrom = null;
   for (const x of VIEWS) $("v-" + x).hidden = x !== v;
   state.view = v;
   if (v === "browse" && browseScroll) { $("v-browse").scrollTop = browseScroll.v; $("list").scrollTop = browseScroll.l; }
@@ -1270,6 +1317,7 @@ function show(v) {
 }
 function goBack() {
   if (state.view === "detail" && detailStack.length) { state.detail = detailStack.pop(); renderDetail(true); fitDetail(state.detail, true); }
+  else if (state.view === "detail" && detailFrom === "stats") { const y = statsScroll; show("stats"); $("statsBody").parentElement.scrollTop = y; }
   else show("browse");
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-back]")) goBack(); });
@@ -1526,6 +1574,7 @@ function selMark(p, kind, tour) {
 // push: opened from inside the panel (stage ↔ Mehrtagestour), so ← goes back there
 function openDetail(d, push) {
   if (state.view === "form" || state.view === "gpx") { toast("Erst speichern oder zurückgehen, dann zeigt ein Tipp auf die Karte die Details."); return; }
+  if (state.view !== "detail") detailFrom = state.view === "stats" ? "stats" : null;
   if (push && state.view === "detail" && state.detail) detailStack.push(state.detail); else detailStack = [];
   state.detail = d;
   if (state.view !== "detail") show("detail");
@@ -1575,6 +1624,10 @@ function focusBucket(id) { const d = { kind: "bucket", id }; openDetail(d); fitD
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-mtf]");
   if (a) { e.preventDefault(); const d = { kind: "mt", mt: a.dataset.mtf }; openDetail(d, state.view === "detail"); fitDetail(d); return; }
+  const ot = e.target.closest("[data-open-t]");
+  if (ot) { const d = { kind: "tour", ref: refFor(ot.dataset.openT) }; if (!d.ref.length) return; openDetail(d, state.view === "detail"); fitDetail(d); return; }
+  const wv = e.target.closest("[data-world]");
+  if (wv) { worldView = wv.dataset.world; lsSet(LS.world, worldView); drawWorld(); return; }
   const sg = e.target.closest("[data-stage]");
   if (sg) { const d = { kind: "tour", ref: refFor(sg.dataset.stage) }; openDetail(d, true); fitDetail(d); return; }
   const sh = e.target.closest("[data-show-trk]"); if (sh) { showTrack(sh.dataset.showTrk); return; }
@@ -2582,6 +2635,176 @@ function saveGpx() {
 function updateGpxBadge() { const n = gpxItems.length; $("gpxBtn").textContent = n ? `GPX importieren (${n} offen)` : "GPX importieren"; }
 
 /* ===================== statistics ===================== */
+/* ===================== statistics: countries, records ===================== */
+// the 195 states (UN members, Holy See, Palestine) plus a few territories with their own country name in OSM, each with its continent
+const COUNTRY_TBL = "DZAF AOAF BJAF BWAF BFAF BIAF CVAF CMAF CFAF TDAF KMAF CGAF CDAF CIAF DJAF EGAF GQAF ERAF SZAF ETAF GAAF GMAF GHAF GNAF GWAF KEAF LSAF LRAF LYAF MGAF MWAF MLAF MRAF MUAF MAAF MZAF NAAF NEAF NGAF RWAF STAF SNAF SCAF SLAF SOAF ZAAF SSAF SDAF TZAF TGAF TNAF UGAF ZMAF ZWAF AFAS AMAS AZAS BHAS BDAS BTAS BNAS KHAS CNAS GEAS INAS IDAS IRAS IQAS ILAS JPAS JOAS KZAS KWAS KGAS LAAS LBAS MYAS MVAS MNAS MMAS NPAS KPAS OMAS PKAS PHAS QAAS KRAS SAAS SGAS LKAS SYAS TJAS THAS TLAS TRAS TMAS AEAS UZAS VNAS YEAS PSAS ALEU ADEU ATEU BYEU BEEU BAEU BGEU HREU CYEU CZEU DKEU EEEU FIEU FREU DEEU GREU HUEU ISEU IEEU ITEU LVEU LIEU LTEU LUEU MTEU MDEU MCEU MEEU NLEU MKEU NOEU PLEU PTEU ROEU RUEU SMEU RSEU SKEU SIEU ESEU SEEU CHEU UAEU GBEU VAEU AGNA BSNA BBNA BZNA CANA CRNA CUNA DMNA DONA SVNA GDNA GTNA HTNA HNNA JMNA MXNA NINA PANA KNNA LCNA VCNA TTNA USNA ARSA BOSA BRSA CLSA COSA ECSA GYSA PYSA PESA SRSA UYSA VESA AUOC FJOC KIOC MHOC FMOC NROC NZOC PWOC PGOC WSOC SBOC TOOC TVOC VUOC XKEU TWAS GLNA AQAN EHAF PRNA NCOC PFOC FOEU SJEU HKAS MOAS";
+const STATES = 195, EVEREST = 8849;
+const CONT = { EU: "Europa", AS: "Asien", AF: "Afrika", NA: "Nordamerika", SA: "Südamerika", OC: "Ozeanien", AN: "Antarktis" };
+const COUNTRY_ALIAS = { GB: "Großbritannien|England|Schottland|Wales|Nordirland|UK", US: "USA|Vereinigte Staaten von Amerika|Amerika", CZ: "Tschechische Republik", NL: "Holland", BY: "Weißrussland", RU: "Russische Föderation",
+  CD: "Demokratische Republik Kongo|DR Kongo", CG: "Republik Kongo|Kongo", CI: "Elfenbeinküste", CV: "Kap Verde", TL: "Osttimor", SZ: "Swasiland", MM: "Burma|Birma", MK: "Mazedonien", MD: "Moldau|Moldawien",
+  KR: "Korea|Republik Korea", VA: "Vatikan", PS: "Palästina|Palästinensische Gebiete", AQ: "Antarktika", AE: "VAE|Emirate", BA: "Bosnien", FM: "Mikronesien", ST: "São Tomé", KN: "St. Kitts und Nevis", VC: "St. Vincent", LC: "St. Lucia" };
+const FLAG_URL = "https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/";
+const normName = (x) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ß/g, "ss").replace(/[^a-z]/g, "");
+let countryIdx = null;
+function countryIndex() {
+  if (countryIdx) return countryIdx;
+  const cont = {}, byName = new Map(), deName = {};
+  for (const x of COUNTRY_TBL.split(" ")) cont[x.slice(0, 2)] = x.slice(2);
+  const add = (n, c) => { const k = normName(n); if (k && !byName.has(k)) byName.set(k, c); };
+  for (const lang of ["de", "en"]) {
+    let dn = null; try { dn = new Intl.DisplayNames([lang], { type: "region" }); } catch (e) { dn = null; }
+    if (dn) for (const c in cont) { try { const n = dn.of(c); add(n, c); if (lang === "de") deName[c] = n; } catch (e) { /* unknown code */ } }
+  }
+  for (const [c, names] of Object.entries(COUNTRY_ALIAS)) for (const n of names.split("|")) add(n, c);
+  return (countryIdx = { cont, byName, deName });
+}
+// country code for the free-text "Land" (Nominatim writes German names, sometimes several languages separated by "/")
+function landCode(land) {
+  const ix = countryIndex(), str = String(land || "").trim(); if (!str) return "";
+  for (const part of [str, ...str.split(/[\/;]/)]) { const c = ix.byName.get(normName(part)); if (c) return c; }
+  return "";
+}
+// continent of a tour; countries on two continents decide by position (Elbrus counts as Europe, Papua as Oceania, Sinai as Asia)
+function contOf(code, t) {
+  if (t && hasPos(t)) {
+    const lat = +t.lat, lon = +t.lon;
+    if (code === "RU") return lon > 0 && lon < 60 ? "EU" : "AS";
+    if (code === "TR") return lon < 29.02 && lat > 40.6 ? "EU" : "AS";
+    if (code === "ID") return lon > 130.8 ? "OC" : "AS";
+    if (code === "EG") return (lat >= 29.95 ? lon > 32.35 : lat > 27.7 && lon > 32.55 + (29.95 - lat) * 0.556) ? "AS" : "AF";
+  }
+  return countryIndex().cont[code] || "";
+}
+// difficulty on one comparable scale: UIAA (also roman and French grades), via ferrata A–F, SAC
+const ROMAN = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10, XI: 11, XII: 12 };
+const FRENCH = { "4a": 4, "4b": 4.33, "4c": 5, "5a": 5.33, "5b": 5.67, "5c": 6, "6a": 6.33, "6a+": 6.67, "6b": 7, "6b+": 7.33, "6c": 7.5, "6c+": 7.67, "7a": 8, "7a+": 8.33, "7b": 8.5, "7b+": 8.67, "7c": 9, "7c+": 9.33, "8a": 9.5, "8a+": 9.67, "8b": 10, "8b+": 10.33, "8c": 10.5, "8c+": 10.67, "9a": 11, "9a+": 11.33, "9b": 11.67, "9c": 12 };
+function gradeScore(sch, kind) {
+  const str = String(sch || "").trim(); if (!str) return -1;
+  if (kind === "via") { const L1 = GRADES.Klettersteig, i = L1.indexOf(str.toUpperCase().replace(/\s/g, "")); return i >= 0 ? i : L1.indexOf(str[0].toUpperCase()); }
+  if (kind === "sac") { const i = SAC.indexOf(str.toUpperCase().replace(/\s/g, "")); return i >= 0 ? i : SAC.indexOf(str.toUpperCase().replace(/[+-]/g, "")); }
+  let best = -1;
+  for (const p0 of str.split(/[\/–]/)) {
+    const p = p0.trim(); let v = -1, m;
+    if ((m = /^(\d{1,2})\s*([+-]?)$/.exec(p))) v = +m[1] + (m[2] === "+" ? 0.33 : m[2] === "-" ? -0.33 : 0);
+    else if ((m = /^([IVX]+)\s*([+-]?)$/.exec(p.toUpperCase())) && ROMAN[m[1]]) v = ROMAN[m[1]] + (m[2] === "+" ? 0.33 : m[2] === "-" ? -0.33 : 0);
+    else if (FRENCH[p.toLowerCase()] != null) v = FRENCH[p.toLowerCase()];
+    if (v > best) best = v;
+  }
+  return best;
+}
+// one entry per calendar day (tours of the same day add up); tours spanning several days are left out, their split per day is unknown
+function dayTotals(list) {
+  const days = new Map();
+  for (const t of list) {
+    if (+t.tage > 1) continue;
+    const k = t.d || "id:" + t.id;
+    const x = days.get(k) || { d: t.d || "", hm: 0, km: 0, min: 0, tours: [] };
+    x.hm += +t.hm || 0; x.km += +t.km || 0; x.min += durMin(t.dur); x.tours.push(t);
+    days.set(k, x);
+  }
+  return [...days.values()];
+}
+const tName = (t) => t.g || t.r || "Tour";
+function renderRecords(T, allPeaks) {
+  const rows = [];
+  const row = (l, v, m, attr) => rows.push(`<button class="rec" type="button" ${attr}><span class="l">${l}</span><b class="v">${v}</b><span class="m">${m}</span></button>`);
+  const when = (d) => d ? ` <small>· ${fmtDate(d)}</small>` : "";
+  const hi = allPeaks.filter((p) => p.h).sort((a, b) => b.h - a.h)[0];
+  if (hi) row("Höchster Gipfel", `${nf.format(hi.h)} m`, `${esc(hi.n)}${hi.t.land ? ` <small>· ${esc(hi.t.land)}</small>` : ""}${when(hi.t.d)}`, `data-open-t="${esc(hi.t.id)}"`);
+  const days = dayTotals(T);
+  const dayRow = (l, key, fmt) => {
+    const top = days.filter((x) => x[key] > 0).sort((a, b) => b[key] - a[key])[0]; if (!top) return;
+    const main = [...top.tours].sort((a, b) => (key === "min" ? durMin(b.dur) - durMin(a.dur) : (+b[key] || 0) - (+a[key] || 0)))[0];
+    row(l, fmt(top[key]), `${top.tours.map((t) => esc(tName(t))).join(" + ")}${when(top.d)}`, `data-open-t="${esc(main.id)}"`);
+  };
+  dayRow("Meiste Höhenmeter an einem Tag", "hm", (v) => `${nf.format(Math.round(v))} Hm`);
+  dayRow("Längste Tagesdistanz", "km", (v) => `${nf1.format(v)} km`);
+  dayRow("Längste Tagestour", "min", (v) => `${minDur(v)} h`);
+  // longest multi-day tour: a named Mehrtagestour, or one entry with several days
+  const multi = [];
+  const groups = {}; for (const t of T) if (t.mt) (groups[t.mt] = groups[t.mt] || []).push(t);
+  for (const [n, M] of Object.entries(groups)) { const ds = M.map((t) => t.d).filter(Boolean).sort(); multi.push({ n, days: dayCount(M), d: ds[0] || "", attr: `data-mtf="${esc(n)}"` }); }
+  for (const t of T) if (!t.mt && +t.tage > 1) multi.push({ n: tName(t), days: +t.tage, d: t.d || "", attr: `data-open-t="${esc(t.id)}"` });
+  const lm = multi.filter((x) => x.days > 1).sort((a, b) => b.days - a.days)[0];
+  if (lm) row("Längste Mehrtagestour", `${lm.days} Tage`, `${esc(lm.n)}${when(lm.d)}`, lm.attr);
+  const hardest = (l, sports, kind) => {
+    const c = T.filter((t) => sports.includes(t.s) && t.sch).map((t) => ({ t, v: gradeScore(t.sch, kind) })).filter((x) => x.v >= 0).sort((a, b) => b.v - a.v)[0];
+    if (c) row(l, esc(c.t.sch), `${c.t.r ? esc(c.t.r) + (c.t.g ? ` <small>· ${esc(c.t.g)}</small>` : "") : esc(tName(c.t))}${when(c.t.d)}`, `data-open-t="${esc(c.t.id)}"`);
+  };
+  hardest("Schwierigste Kletterroute", ["Klettern", "Kletterei"], "climb");
+  hardest("Schwierigster Klettersteig", ["Klettersteig"], "via");
+  hardest("Schwierigste Hochtour", ["Hochtour", "Skihochtour"], "sac");
+  return rows.length ? `<h3 class="sec">Persönliche Rekorde</h3><div class="recs">${rows.join("")}</div>` : "";
+}
+function everestHtml(hm) {
+  const f = hm / EVEREST; if (f < 0.05) return "";
+  const n = Math.min(60, Math.ceil(f)), frac = f - Math.floor(f) || 1, tri = "M9 0 18 16H0Z";
+  let icons = "";
+  for (let i = 0; i < n; i++) {
+    const part = i === n - 1 && f < 60 ? frac : 1;
+    icons += part >= 1 ? `<svg viewBox="0 0 18 16"><path class="e1" d="${tri}"/></svg>`
+      : `<svg viewBox="0 0 18 16"><clipPath id="evc"><rect x="0" y="${(16 * (1 - part)).toFixed(1)}" width="18" height="16"/></clipPath><path class="e0" d="${tri}"/><path class="e1" d="${tri}" clip-path="url(#evc)"/></svg>`;
+  }
+  return `<div class="everest"><div class="evs" aria-hidden="true">${icons}</div><p><b>${nf1.format(Math.round(f * 10) / 10)} × Mount Everest</b><span>${nf.format(Math.round(hm))} Höhenmeter ÷ ${nf.format(EVEREST)}&nbsp;m Everest-Höhe</span></p></div>`;
+}
+// countries: summits and tours per country, continents, world map
+function countryStats(T) {
+  const ix = countryIndex(), by = new Map(), noLand = [];
+  for (const t of T) {
+    const land = String(t.land || "").trim(); if (!land) { noLand.push(t); continue; }
+    const code = landCode(land), key = code || "?" + normName(land);
+    const x = by.get(key) || { key, code, name: (code && ix.deName[code]) || land, tours: [], peaks: [], conts: new Set() };
+    x.tours.push(t);
+    const pk = peakList([t]); x.peaks.push(...pk);
+    if (code && pk.length) { const c = contOf(code, t); if (c) x.conts.add(c); }
+    by.set(key, x);
+  }
+  const list = [...by.values()].map((x) => ({ ...x, n: new Set(x.peaks.map((p) => p.n.toLowerCase())).size, top: x.peaks.filter((p) => p.h).sort((a, b) => b.h - a.h)[0] || x.peaks[0] }));
+  list.sort((a, b) => b.n - a.n || b.tours.length - a.tours.length || a.name.localeCompare(b.name, "de"));
+  const withPeak = list.filter((x) => x.n > 0);
+  const conts = {}; for (const x of withPeak) for (const c of x.conts) conts[c] = (conts[c] || 0) + 1;
+  return { list, withPeak, conts, noLand };
+}
+let worldData = null, worldLoad = null, worldView = lsGet(LS.world) === "eu" ? "eu" : "world", worldSets = { on: new Set(), half: new Set() };
+function loadWorld() {
+  if (!worldLoad) worldLoad = fetch("welt.json").then((r) => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))).then((d) => (worldData = d)).catch((e) => { worldLoad = null; throw e; });
+  return worldLoad;
+}
+function drawWorld() {
+  const box = $("worldMap"); if (!box) return;
+  for (const b of document.querySelectorAll("[data-world]")) b.setAttribute("aria-checked", b.dataset.world === worldView ? "true" : "false");
+  if (!worldData) {
+    box.innerHTML = `<div class="msg">Weltkarte wird geladen …</div>`;
+    loadWorld().then(drawWorld).catch(() => { const b2 = $("worldMap"); if (b2) b2.innerHTML = `<div class="msg">Die Weltkarte konnte nicht geladen werden.</div>`; });
+    return;
+  }
+  // world: Equal Earth with 1:110 Mio. outlines; Europe: own projection with finer outlines; tiny states as dots
+  const eu = worldView === "eu", W = eu ? worldData.e : worldData, names = countryIndex().deName;
+  const cls = (c) => worldSets.on.has(c) ? "on" : worldSets.half.has(c) ? "half" : "";
+  let svg = `<svg viewBox="0 0 ${W.w} ${W.h}" role="img" aria-label="${eu ? "Europakarte" : "Weltkarte"} der Länder mit Gipfel">${eu ? `<rect class="sea" width="${W.w}" height="${W.h}"/>` : `<path class="sea" d="${W.sphere}"/>`}`;
+  for (const [c, d] of Object.entries(W.p)) { const k = cls(c); svg += `<path${k ? ` class="${k}"` : ""} d="${d}"><title>${esc(names[c] || c)}</title></path>`; }
+  for (const [c, [x, y]] of Object.entries(W.d)) { const k = cls(c); if (k) svg += `<circle class="${k}" cx="${x}" cy="${y}" r="${eu ? 7 : 5}"><title>${esc(names[c] || c)}</title></circle>`; }
+  box.innerHTML = svg + "</svg>";
+}
+function renderCountries(T) {
+  const cs = countryStats(T);
+  if (!cs.list.length && !cs.noLand.length) return { kpis: { lands: 0, conts: 0 }, html: "" };
+  worldSets = { on: new Set(cs.withPeak.map((x) => x.code).filter(Boolean)), half: new Set(cs.list.filter((x) => !x.n).map((x) => x.code).filter(Boolean)) };
+  const ncont = Object.keys(cs.conts).length;
+  let html = `<h3 class="sec">Länder</h3>
+    <div class="worldhead"><div class="legend2"><span><i></i>mit Gipfel</span>${worldSets.half.size ? `<span><i class="half"></i>nur Touren</span>` : ""}</div>
+      <div class="seg mini" role="radiogroup" aria-label="Kartenausschnitt"><button type="button" role="radio" data-world="world" aria-checked="${worldView !== "eu"}">Welt</button><button type="button" role="radio" data-world="eu" aria-checked="${worldView === "eu"}">Europa</button></div></div>
+    <div class="world" id="worldMap"></div>
+    <div class="conts">${Object.keys(CONT).map((c) => `<span class="cont${cs.conts[c] ? " on" : ""}">${CONT[c]}${cs.conts[c] ? ` <b>${cs.conts[c]}</b>` : ""}</span>`).join("")}</div>
+    <div class="ctrys">${cs.list.map((x) => {
+      const top = x.top && x.top.h ? `höchster Gipfel: <button class="linkbtn" type="button" data-open-t="${esc(x.top.t.id)}">${esc(x.top.n)}</button> ${nf.format(x.top.h)} m` : x.top ? `<button class="linkbtn" type="button" data-open-t="${esc(x.top.t.id)}">${esc(x.top.n)}</button>` : "kein Gipfel";
+      const cont = x.code ? CONT[[...x.conts][0] || countryIndex().cont[x.code]] || "" : "";
+      return `<div class="ctry${x.n ? "" : " dim"}">${x.code ? `<img class="flag" src="${FLAG_URL}${x.code.toLowerCase()}.svg" alt="" width="22" height="16" loading="lazy">` : `<span class="flag"></span>`}<span class="n">${esc(x.name)}</span><span class="r">${x.n ? `${x.n} Gipfel · ` : ""}${x.tours.length} ${x.tours.length === 1 ? "Tour" : "Touren"}</span><span class="meta">${cont ? esc(cont) + " · " : ""}${top}</span></div>`;
+    }).join("")}</div>`;
+  if (cs.noLand.length) html += `<p class="note" style="margin:0">Ohne Land: ${cs.noLand.slice(0, 6).map((t) => `<button class="linkbtn" type="button" data-open-t="${esc(t.id)}">${esc(tName(t))}</button>`).join(", ")}${cs.noLand.length > 6 ? ` und ${cs.noLand.length - 6} weitere` : ""}. Mit Land zählen sie hier mit.</p>`;
+  return { kpis: { lands: cs.withPeak.length, conts: ncont }, html };
+}
+
 function renderStatsView() {
   const T = filteredTours();
   const filtersOn = state.sportsOff.size || state.year || state.land || state.q;
@@ -2589,21 +2812,24 @@ function renderStatsView() {
   const peaks = new Set(allPeaks.map((p) => p.n.toLowerCase()));
   const sum = (list, k) => list.reduce((a, t) => a + (+t[k] || 0), 0);
   const mins = T.reduce((a, t) => a + durMin(t.dur), 0);
-  const hi = allPeaks.filter((p) => p.h).sort((a, b) => b.h - a.h)[0];
-  const hmMax = [...T].filter((t) => +t.hm).sort((a, b) => b.hm - a.hm)[0];
+  const above = (m) => new Set(allPeaks.filter((p) => p.h >= m).map((p) => p.n.toLowerCase())).size;
   const kpi = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
   let html = filtersOn ? `<p class="note" style="margin:0">Gilt für die aktuellen Filter der Übersicht.</p>` : "";
   if (!T.length) { $("statsBody").innerHTML = html + `<div class="empty" style="padding:0"><b>Noch nichts auszuwerten</b><span>Sobald Touren im Gipfelbuch stehen, siehst du hier Höhenmeter, Gipfel und Tage pro Jahr und Sportart.</span></div>`; return; }
+  const lands = renderCountries(T);
   html += `<div class="kpis">
     ${kpi(nf.format(T.length), "Touren")}${kpi(nf.format(peaks.size), "verschiedene Gipfel")}
-    ${kpi(nf.format(dayCount(T)), "Tage am Berg")}${kpi(nf.format(Math.round(sum(T, "hm"))), "Höhenmeter")}
-    ${kpi(nf.format(Math.round(sum(T, "km"))), "Kilometer")}${kpi(minDur(mins) || "–", "Stunden unterwegs")}
-    ${kpi(hi ? esc(hi.n) : "–", hi ? `höchster Gipfel · ${nf.format(hi.h)} m` : "höchster Gipfel")}
-    ${kpi(hmMax ? nf.format(hmMax.hm) + " Hm" : "–", hmMax ? `meiste Höhenmeter · ${esc(hmMax.g || hmMax.r)}` : "meiste Höhenmeter")}
+    ${kpi(nf.format(dayCount(T)), "Tage am Berg")}${kpi(minDur(mins) || "–", "Stunden unterwegs")}
+    ${kpi(nf.format(Math.round(sum(T, "hm"))), "Höhenmeter")}${kpi(nf.format(Math.round(sum(T, "km"))), "Kilometer")}
+    ${kpi(`${lands.kpis.lands}<small> / ${STATES}</small>`, "Länder mit Gipfel")}${kpi(`${lands.kpis.conts}<small> / 7</small>`, "Kontinente mit Gipfel")}
+    ${kpi(nf.format(above(3000)), "Gipfel über 3000 m")}${kpi(nf.format(above(4000)), "Gipfel über 4000 m")}
   </div>`;
+  html += everestHtml(sum(T, "hm"));
+  html += renderRecords(T, allPeaks);
+  html += lands.html;
   const years = {};
   for (const t of T) { const y = String(t.d || "").slice(0, 4) || "–"; (years[y] = years[y] || []).push(t); }
-  const yk = Object.keys(years).sort().reverse();
+  const yk = Object.keys(years).sort().reverse().sort((a, b) => (a === "–") - (b === "–"));
   const maxHm = Math.max(1, ...yk.map((y) => sum(years[y], "hm")));
   html += `<h3 class="sec">Höhenmeter pro Jahr</h3><div class="bars">${yk.map((y) => { const v = sum(years[y], "hm"); return `<div class="barrow"><span class="k">${esc(y)}</span><div class="track"><div class="fill" style="width:${(v / maxHm * 100).toFixed(1)}%"></div></div><span class="v">${nf.format(Math.round(v))}</span></div>`; }).join("")}</div>`;
   html += `<div class="tblwrap"><table class="t"><thead><tr><th>Jahr</th><th class="num">Touren</th><th class="num">Gipfel</th><th class="num">Tage</th><th class="num">Hm</th><th class="num">km</th></tr></thead><tbody>
@@ -2631,6 +2857,7 @@ function renderStatsView() {
   const bOpen = bucketItems().filter((b) => !bucketDone(b)).length, bDone = bucketItems().length - bOpen;
   if (bucketItems().length) html += `<h3 class="sec">Bucketlist</h3><p style="margin:0">${bDone} von ${bucketItems().length} Zielen erledigt, ${bOpen} offen.</p>`;
   $("statsBody").innerHTML = html;
+  drawWorld();
 }
 
 /* ===================== settings, Excel ===================== */
