@@ -19,6 +19,7 @@ Persönliches Gipfel- und Tourenbuch als Web-App: topografische Karte, GPX-Auswe
 - **Mehrtagestouren:** ein Tipp auf den Namen (↔) öffnet die Übersicht mit Zeitraum, Summen, Gipfeln und Etappen.
 - **Bucketlist:** Ziele mit Priorität. Sobald derselbe Gipfel (und ggf. die Route) im Gipfelbuch steht, gilt das Ziel als erledigt.
 - **Statistik:** Touren, Gipfel, Tage, Höhenmeter (auch als Vielfaches des Mount Everest), Gipfel über 3000 und 4000 m; persönliche Rekorde (höchster Gipfel, meiste Höhenmeter, Distanz und Zeit an einem Tag, längste Mehrtagestour, schwierigste Route), jeder mit Link zur Tour; Länder mit Gipfel (von 195) mit Flaggen, Kontinenten und Welt- bzw. Europakarte; Höhenmeter pro Jahr und Sportart, Mehrtagestouren.
+- **Feiern:** beim Speichern einer neuen Tour gibt es Konfetti (bei einem neuen Land in dessen Flaggenfarben) für ein neues Land, einen neuen Kontinent oder ein erreichtes Bucketlist-Ziel, und eine kleine Meldung bei neuen Rekorden. Abschaltbar und mit Vorschau unter Einstellungen → Feiern.
 - **Excel:** Export als Backup, Import aus einer Excel-Liste.
 - Jede Änderung ist ein Commit im Datenrepository, der Verlauf ist dort einsehbar und wiederherstellbar.
 
